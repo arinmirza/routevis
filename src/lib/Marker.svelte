@@ -2,8 +2,8 @@
 	import { onMount, onDestroy, getContext, setContext } from 'svelte';
 	import L from 'leaflet';
 
-	export let width: number;
-	export let height: number;
+	export let width: number = 20;
+	export let height: number = 20;
 	export let latLng: L.LatLngExpression;
 
 	let marker: L.Marker | undefined;
