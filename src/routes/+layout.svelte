@@ -24,6 +24,8 @@
 	$: locationsCount = $locationsJSON.length;
 </script>
 
+
+
 <div class="navbar bg-base-300">
 	<div class="flex-1">
 		<a href="/" class="btn btn-ghost normal-case text-xl">routevis</a>
