@@ -1,12 +1,6 @@
-# Leaflet in SvelteKit with renderless components
+# Routevis
 
-This is a very simple demo of how to use Leaflet in SvelteKit with renderless components. The ideas behind this implementation are described in the video.
-
-[![Leaflet in SvelteKit](http://img.youtube.com/vi/JFctWXEzFZw/0.jpg)](http://www.youtube.com/watch?v=JFctWXEzFZw 'Leaflet in SvelteKit')
-
-The project was bootstrapped with the SvelteKit CLI and [Tailwind was added](https://tailwindcss.com/docs/guides/sveltekit) (optional).
-
-Note that this is not a complete Leaflet implementation. Use it as inspiration or starting point to implement whatever you really need from Leaflet in your project!
+Route visualization tool for interdisciplinary project at TU Munich, in collaboration with SAP.
 
 ## Developing
 
@@ -26,5 +20,3 @@ npm run build
 ```
 
 You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
