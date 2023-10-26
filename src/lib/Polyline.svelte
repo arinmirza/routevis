@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy, getContext, setContext } from 'svelte';
 	import L from 'leaflet';
+	import * as decorate  from 'leaflet-polylinedecorator' /* Do not delete, breaks */
+	
 
 	export let latLngs: L.LatLngExpression[];
 	export let color: string = "black";
