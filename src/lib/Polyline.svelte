@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy, getContext, setContext } from 'svelte';
 	import L from 'leaflet';
+	import * as decorate  from 'leaflet-polylinedecorator'
+	//import { setText } from 'leaflet-textpath'
+	
 
 	export let latLngs: L.LatLngExpression[];
 	export let color: string = "black";
@@ -9,6 +12,7 @@
     export let popup: string = "";
 
     let polyline: L.Polyline | undefined;
+	let decorator: L.PolylineDecorator | undefined;
     let polylineElement: HTMLElement;
 
 	const { getMap }: { getMap: () => L.Map | undefined } = getContext('map');
@@ -22,12 +26,18 @@
 	onMount(() => {
 		if (map) {
             polyline = L.polyline(latLngs, { color, opacity, weight }).bindPopup(popup).addTo(map);
+			decorator = L.polylineDecorator(polyline, { patterns: [
+        		// defines a pattern of 10px-wide dashes, repeated every 20px on the line
+        		{offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: { fillColor: color, color, fillOpacity: 1}})}
+    		]}).addTo(map);
 		}
 	});
 
 	onDestroy(() => {
         polyline?.remove();
+		decorator?.remove();
         polyline = undefined;
+		decorator = undefined;
 	});
 </script>
 
