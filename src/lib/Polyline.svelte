@@ -29,7 +29,7 @@
 			decorator = L.polylineDecorator(polyline, { patterns: [
         		// defines a pattern of 10px-wide dashes, repeated every 20px on the line
         		{offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: { fillColor: color, color, fillOpacity: 1}})}
-    		]}).addTo(map);
+    		]}).bindPopup(popup).addTo(map);
 		}
 	});
 
