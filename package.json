@@ -35,6 +35,10 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"leaflet-polylinedecorator": "^1.6.0"
+		"@supabase/auth-helpers-sveltekit": "^0.9.3",
+		"@supabase/supabase-js": "^2.38.0",
+		"axios": "^1.6.0",
+		"leaflet-polylinedecorator": "^1.6.0",
+		"leaflet.marker.slideto": "^0.3.0"
 	}
 }
