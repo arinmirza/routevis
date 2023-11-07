@@ -3,8 +3,8 @@
 export namespace My {
     
     // Coordinate related
-    export type LatLngLoc = [number, number, string];
-    export type LocationSet = LatLngLoc[];
+    export type NamedLocation = [number, number, string]; // [lat, lng, name]
+    export type LocationGroup = NamedLocation[];
 
     // Algorithm solution related
     export type SingleTour = number[];
@@ -15,13 +15,11 @@ export namespace My {
         totalDuration: number,
         longestTour: number,
         computationTime: number,
-        ignoredCustomers: number[],
         solution: MultiTour[],
         arrivals: MultiTour[],
     }
 
 }
-
 
 
 

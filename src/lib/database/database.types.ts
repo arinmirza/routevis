@@ -68,25 +68,28 @@ export interface Database {
           created_at: string
           description: string
           id: number
-          json: Json
+          locations: Json
           name: string
           owner: string
+          vehicles: Json
         }
         Insert: {
           created_at?: string
           description: string
           id?: number
-          json: Json
+          locations?: Json
           name: string
           owner: string
+          vehicles: Json
         }
         Update: {
           created_at?: string
           description?: string
           id?: number
-          json?: Json
+          locations?: Json
           name?: string
           owner?: string
+          vehicles?: Json
         }
         Relationships: []
       }

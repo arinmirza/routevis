@@ -1,3 +1,4 @@
+import type { MapLocation, Solution, VehiclePlan } from '$lib/types/map';
 import { list } from '$lib/utils';
 
 export class SolutionsQuery {
@@ -12,6 +13,17 @@ export class SolutionsQuery {
 	async all() {
 		const { data, error } = await this._supabase.from('solutions').select();
 		error && console.error('SolutionsQuery:', error);
-		return list(data);
+
+		return list(data).map(row => {
+			const solution: Solution = {
+				id: row.id,
+				name: row.name,
+				description: row.description,
+				vehicles: row.vehicles as VehiclePlan[],
+				locations: row.locations as MapLocation[],
+			};
+			return solution;
+		});
 	}
+
 }

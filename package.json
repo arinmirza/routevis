@@ -38,6 +38,7 @@
 		"@supabase/auth-helpers-sveltekit": "^0.9.3",
 		"@supabase/supabase-js": "^2.38.0",
 		"axios": "^1.6.0",
+		"dayjs": "^1.11.10",
 		"leaflet-polylinedecorator": "^1.6.0",
 		"leaflet.marker.slideto": "^0.3.0"
 	}

@@ -19,11 +19,6 @@ export class Query {
 	}
 }
 
-export namespace Db {
-	export type LocationSet = Awaited<ReturnType<InstanceType<typeof LocationsQuery>['all']>>[number];
-	export type DurationMatrix = Awaited<ReturnType<InstanceType<typeof DurationsQuery>['all']>>[number];
-	export type SolutionRecord = Awaited<ReturnType<InstanceType<typeof SolutionsQuery>['all']>>[number];
-}
 
 
 
