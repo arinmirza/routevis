@@ -106,7 +106,7 @@
 				</div>
 
 				<li>
-					<a class={`${path === '/welcome' ? 'active' : ''}`} href="/tutorial">Tutorial</a>
+					<a class={`${path === '/welcome' ? 'active' : ''}`} href="/tutorial">Tutorial <span class="text-error">(todo)</span></a>
 				</li>
 
 				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem;">
@@ -120,7 +120,8 @@
 				</li>
 
 				<li>
-					<a class={`${path === '/algorithms/tsp' ? 'active' : ''}`} href="/algorithms/tsp">Travelling Salesman Problem</a>
+					<a class={`${path === '/algorithms/tsp' ? 'active' : ''}`} href="/algorithms/tsp">Travelling Salesman Problem <span class="text-error">(todo)</span></a>
+					
 				</li>
 
 				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem;">
@@ -130,7 +131,7 @@
 				</div>
 
 				<li>
-					<a class={`${path === '/tools/benchmark' ? 'active' : ''}`} href="/tools/benchmark">Benchmarking</a>
+					<a class={`${path === '/tools/benchmark' ? 'active' : ''}`} href="/tools/benchmark">Benchmarking <span class="text-error">(todo)</span></a>
 				</li>
 
 				<li>
@@ -168,11 +169,11 @@
 				-->
 
 				<li>
-					<a class={`${path === '/docs/algorithms' ? 'active' : ''}`} href="/docs/algorithms">Algorithms</a>
+					<a class={`${path === '/docs/algorithms' ? 'active' : ''}`} href="/docs/algorithms">Algorithms <span class="text-error">(todo)</span></a>
 				</li>
 
 				<li>
-					<a class={`${path === '/docs/references' ? 'active' : ''}`} href="/docs/references">References</a>
+					<a class={`${path === '/docs/references' ? 'active' : ''}`} href="/docs/references">References <span class="text-error">(todo)</span></a>
 				</li>
 			</ul>
 		</div>

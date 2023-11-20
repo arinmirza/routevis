@@ -27,7 +27,7 @@
 
             <div class="w-full" >
                 <button class="btn btn-primary btn-lg text-xl" style="width: calc(60% + 4rem);" 
-                on:click={() => goto('/compute')}>Get Started Now</button>
+                on:click={() => goto('/algorithms/vrp')}>Get Started Now</button>
             </div>
 
             <div class="pb-8" />
