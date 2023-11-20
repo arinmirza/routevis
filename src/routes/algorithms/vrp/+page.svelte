@@ -51,23 +51,7 @@
 
 	function solve() {
 		let auth = session?.access_token;
-		axios.post('https://vrpms2.vercel.app/api/vrp/ga', { // 'https://vrpms-rpke.vercel.app/api/vrp/ga'
-			solutionName: 'yusuf-arin-test-ui-request',
-			solutionDescription: 'TDVRP GA Test Run via UI',
-			locationsKey: 1,
-			durationsKey: 1,
-			capacities: [6, 6, 6],
-			startTimes: [0, 0, 0],
-			ignoredCustomers: [
-				20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-				48, 49, 50, 51, 52, 53, 54, 55, 56, 57
-			],
-			completedCustomers: [],
-			multiThreaded: false,
-			randomPermutationCount: 0,
-			iterationCount: 0,
-			auth
-		});
+		
 	}
 
 	function findById<T extends { id: K }, K>(array: T[], id: K) {
