@@ -59,8 +59,8 @@
 	let _ignoredCustomers: string = '';
 	let _completedCustomers: string = '';
 	let _startTimesOfVehicles: string = '';
-	$: ignoredCustomers = _ignoredCustomers.split(',').map((id) => nonNegativeInt(id));
-	$: completedCustomers = _completedCustomers.split(',').map((id) => nonNegativeInt(id));
+	$: ignoredCustomers = _ignoredCustomers ? _ignoredCustomers.split(',').map((id) => nonNegativeInt(id)) : [];
+	$: completedCustomers = _completedCustomers ? _completedCustomers.split(',').map((id) => nonNegativeInt(id)) : []; 
 	$: startTimesOfVehicles = _startTimesOfVehicles.split(',').map((id) => nonNegativeInt(id));
 	$: vehicleCapacities = Array(vehicleCount).fill(vehicleCapacity);
 
@@ -93,7 +93,6 @@
 		durationsKey,
 		capacities: vehicleCapacities,
 		startTimes: startTimesOfVehicles,
-		startTime: 0,
 		ignoredCustomers,
 		completedCustomers,
 		auth: session?.access_token
@@ -132,10 +131,9 @@
 				durationsKey,
 				capacities: vehicleCapacities,
 				startTimes: startTimesOfVehicles,
-				startNode: 0, // TODO: This needs to be removed
 				iterationCount: gaIterationCount,
 				randomPermutationCount: gaRandomPermutationCount,
-				customers: [], // TODO: This needs to be removed
+				multiThreaded: gaMultiThreaded,
 				ignoredCustomers,
 				completedCustomers,
 				auth
