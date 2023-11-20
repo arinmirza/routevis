@@ -12,6 +12,7 @@ import PauseIcon from "$lib/svg/PauseIcon.svelte";
     export let solutions: Solution[];
     export let selectedSolutionId: number | null;
     export let currentTime: number;
+	export let visualize: boolean;
 
 
 	/* ==============  Derived data from the selected solution ================ */
@@ -68,6 +69,8 @@ import PauseIcon from "$lib/svg/PauseIcon.svelte";
 
 <div class="flex flex-row items-center place-content-equal w-full pt-2">
 
+
+	<!--
 	<div class="pl-2">
 		<button class="btn btn-ghost">
 			<div class="flex flex-row items-end">
@@ -77,7 +80,7 @@ import PauseIcon from "$lib/svg/PauseIcon.svelte";
 			</div>
 		</button>
 	</div>
-	
+	-->
 
 	<div class="p-2">
 		{#if isPlaying}
@@ -111,6 +114,9 @@ import PauseIcon from "$lib/svg/PauseIcon.svelte";
 	</div>
 
 	<div style="margin-left: auto;">
-		<button class="btn btn-ghost" on:click={() => (isMenuOpen = true)}>Menu</button>
+		<button class="btn btn-ghost" on:click={() => {
+			selectedSolutionId = null;
+			visualize = false;
+			}}>Menu</button>
 	</div>
 </div>

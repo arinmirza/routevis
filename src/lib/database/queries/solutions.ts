@@ -18,7 +18,9 @@ export class SolutionsQuery {
 			const solution: Solution = {
 				id: row.id,
 				name: row.name,
+				created_at: row.created_at,
 				description: row.description,
+				owner: row.owner,
 				vehicles: row.vehicles as VehiclePlan[],
 				locations: row.locations as MapLocation[],
 			};

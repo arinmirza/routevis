@@ -6,6 +6,7 @@
 	import type { PageData } from './$types';
 	import type { DurationMatrix, LocationGroup, Solution } from '$lib/types/map';
 	import axios from 'axios';
+	import InspectApiModal from '$lib/components/debug/InspectAPIModal.svelte';
 
 	export let data: PageData;
 
@@ -20,6 +21,8 @@
 
 	/* Toggle Parameters */
 	let showAdvancedParameters = false;
+	let showMetaParameters = false;
+	let showApiCall = false;
 	let loadingLocations = false;
 	let loadingDurations = false;
 
@@ -29,12 +32,41 @@
 	/* Helper type definitions */
 	type VehicleInput = { capacity: number; startTime: number };
 
-	/* Common Parameters */
+	/* Helper methods */
+	function nonNegativeInt(str: string) {
+		const value = parseInt(str);
+		return value && value >= 0 ? value : 0;
+	}
+
+	function prettyTimestamp(ts: string) {
+		const date = ts.split('T')?.[0];
+		const time = ts.split('T')?.[1]?.split('.')?.[0];
+		return `${date} ${time}`;
+	}
+
+	/* Database Parameters */
 	let locationsKey: number;
 	let durationsKey: number;
-	let vehicles: VehicleInput[];
-	let ignoredCustomers: number[];
-	let completedCustomers: number[];
+
+	/* Common Form Parameters */
+	let _vehicleCapacity: string = '1';
+	let _vehicleCount: string = '1';
+	$: vehicleCapacity = nonNegativeInt(_vehicleCapacity);
+	$: vehicleCount = nonNegativeInt(_vehicleCount);
+	$: vehicleCount, (() => (_startTimesOfVehicles = Array(vehicleCount).fill(0).join(', ')))();
+
+	/* Advanced Form Parameters */
+	let _ignoredCustomers: string = '';
+	let _completedCustomers: string = '';
+	let _startTimesOfVehicles: string = '';
+	$: ignoredCustomers = _ignoredCustomers.split(',').map((id) => nonNegativeInt(id));
+	$: completedCustomers = _completedCustomers.split(',').map((id) => nonNegativeInt(id));
+	$: startTimesOfVehicles = _startTimesOfVehicles.split(',').map((id) => nonNegativeInt(id));
+	$: vehicleCapacities = Array(vehicleCount).fill(vehicleCapacity);
+
+	/* Solution Describers */
+	let solutionName: string = '';
+	let solutionDescription: string = '';
 
 	/* Simulated Annealing Parameters */
 	let initialTemperature = 50;
@@ -47,11 +79,73 @@
 	// TODO
 
 	/* Genetic Algorithm Parametes */
-	// TODO
+	let gaMultiThreaded: boolean = false;
+	let _gaRandomPermutationCount: string = '1000';
+	let _gaIterationCount: string = '2000';
+	$: gaRandomPermutationCount = nonNegativeInt(_gaRandomPermutationCount);
+	$: gaIterationCount = nonNegativeInt(_gaIterationCount);
+
+	/* Post Request Body */
+	$: commonRequestBody = {
+		solutionName,
+		solutionDescription,
+		locationsKey,
+		durationsKey,
+		capacities: vehicleCapacities,
+		startTimes: startTimesOfVehicles,
+		startTime: 0,
+		ignoredCustomers,
+		completedCustomers,
+		auth: session?.access_token
+	};
+
+	$: specialRequestBody = getSpecialRequestBody(selectedAlgorithm);
+	$: mergedRequestBody = { ...commonRequestBody, ...specialRequestBody };
+	$: requestEndpoint = getEndpoint(selectedAlgorithm);
+
+	function getSpecialRequestBody(selected: string | null) {
+		if (selected === 'ga') {
+			return {
+				multiThreaded: gaMultiThreaded,
+				iterationCount: gaIterationCount,
+				randomPermutationCount: gaRandomPermutationCount
+			};
+		}
+		return {};
+	}
+
+	function getEndpoint(selected: string | null) {
+		if (selected === 'ga') {
+			return 'https://vrpms-rpke.vercel.app/api/vrp/ga';
+		}
+		return '<ENDPOINT>';
+	}
 
 	function solve() {
 		let auth = session?.access_token;
-		
+		axios.post(
+			requestEndpoint,
+			{
+				solutionName,
+				solutionDescription,
+				locationsKey,
+				durationsKey,
+				capacities: vehicleCapacities,
+				startTimes: startTimesOfVehicles,
+				startNode: 0, // TODO: This needs to be removed
+				iterationCount: gaIterationCount,
+				randomPermutationCount: gaRandomPermutationCount,
+				customers: [], // TODO: This needs to be removed
+				ignoredCustomers,
+				completedCustomers,
+				auth
+			},
+			{
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			}
+		);
 	}
 
 	function findById<T extends { id: K }, K>(array: T[], id: K) {
@@ -105,11 +199,14 @@
 						</label>
 						<select class="select select-bordered" id="locations-select" bind:value={locationsKey}>
 							{#each locations as location}
-								<option value={location.id}>{location.name} {location.created_at}</option>
+								<option value={location.id}>[{prettyTimestamp(location.created_at)}] {location.name}</option>
 							{/each}
 						</select>
 						<label class="label" for="locations-select">
-							<span class="label-text text-gray-500">{findById(locations, locationsKey)?.description ?? ''}</span>
+							<span class="label-text text-gray-500">
+								<span class="font-bold">Description: </span>
+								{findById(locations, locationsKey)?.description}
+							</span>
 						</label>
 					</div>
 
@@ -127,7 +224,7 @@
 				<!-- Duration Matrix Selection -->
 				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 					<!-- Input -->
-					<div class="form-control" style="min-width: 28rem;">
+					<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
 						<label class="label" for="duration-select">
 							<span class="label-text">Duration Matrix</span>
 						</label>
@@ -137,7 +234,10 @@
 							{/each}
 						</select>
 						<label class="label" for="duration-select">
-							<span class="label-text text-gray-500">{findById(durations, durationsKey)?.description}</span>
+							<span class="label-text text-gray-500">
+								<span class="font-bold">Description: </span>
+								{findById(durations, durationsKey)?.description}
+							</span>
 						</label>
 					</div>
 
@@ -152,8 +252,140 @@
 					</div>
 				</div>
 
-				<!-- Vehicle Specification -->
-				<!-- TODO -->
+				<!-- Vehicle Count  -->
+				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+					<!-- Input -->
+					<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+						<label class="label" for="vehicle-count">
+							<span class="label-text">Vehicle Count</span>
+						</label>
+						<input type="text" class="input input-bordered w-full" id="vehicle-count" bind:value={_vehicleCount} />
+						<label class="label" for="vehicle-count">
+							<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+						</label>
+					</div>
+
+					<div class="divider lg:divider-horizontal" />
+
+					<!-- Description -->
+					<div class="max-w-md">
+						<p>The number of vehicles in your fleet.</p>
+					</div>
+				</div>
+
+				<!-- Vehicle Capacity  -->
+				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+					<!-- Input -->
+					<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+						<label class="label" for="vehicle-capacity">
+							<span class="label-text">Vehicle Capacity</span>
+						</label>
+						<input
+							type="text"
+							class="input input-bordered w-full"
+							id="vehicle-capacity"
+							bind:value={_vehicleCapacity} />
+						<label class="label" for="vehicle-capacity">
+							<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+						</label>
+					</div>
+
+					<div class="divider lg:divider-horizontal" />
+
+					<!-- Description -->
+					<div class="max-w-md">
+						<p>Unit capacity of each vehicle.</p>
+					</div>
+				</div>
+
+				{#if showAdvancedParameters}
+					<!-- Ignored Customers  -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="ignored-customers">
+								<span class="label-text">Ignored Customers</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="ignored-customers"
+								bind:value={_ignoredCustomers} />
+							<label class="label" for="ignored-customers">
+								<span class="label-text text-gray-500">
+									Provide a list of comma separated non-negative integers representing the customer (location) ids.
+								</span>
+							</label>
+						</div>
+
+						<div class="divider lg:divider-horizontal" />
+
+						<!-- Description -->
+						<div class="max-w-md">
+							<p>
+								Customers to be ignored even though they are included in the selected location set. Relevant if a
+								customer cannot be served or cancelled for the day.
+							</p>
+						</div>
+					</div>
+
+					<!-- Completed Customers  -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="completed-customers">
+								<span class="label-text">Completed Customers</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="completed-customers"
+								bind:value={_completedCustomers} />
+							<label class="label" for="completed-customers">
+								<span class="label-text text-gray-500">
+									Provide a list of comma separated non-negative integers representing the customer (location) ids.
+								</span>
+							</label>
+						</div>
+
+						<div class="divider lg:divider-horizontal" />
+
+						<!-- Description -->
+						<div class="max-w-md">
+							<p>
+								Customers to be ignored from the selected location set because they were already completed. Relevant for
+								VRP refinement calls.
+							</p>
+						</div>
+					</div>
+
+					<!-- Start Times of Vehicles -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="start-times">
+								<span class="label-text">Start Times of Vehicles</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="start-times"
+								bind:value={_startTimesOfVehicles} />
+							<label class="label" for="duration-select">
+								<span class="label-text text-gray-500">
+									Provide a list of comma separated non-negative integers representing seconds after shift start.
+								</span>
+							</label>
+						</div>
+
+						<div class="divider lg:divider-horizontal" />
+
+						<!-- Description -->
+						<div class="max-w-md">
+							<p>The closest availability times of the vehicles at the warehouse. Relevant for VRP refinement calls.</p>
+						</div>
+					</div>
+				{/if}
 
 				<!-- Advanced Parameters Button -->
 				<div class="flex flex-row place-content-end justify-items-end">
@@ -167,26 +399,6 @@
 						</button>
 					</div>
 				</div>
-			</div>
-		</div>
-
-		<div class="p-2" />
-
-		<!-- Customers Card-->
-		<div class="card bg-base-200 w-full text-neutral-content">
-			<div class="card-body">
-				<!-- Customers Card Title -->
-				<div id="title" class="text-3xl font-bold pb-4">Customers</div>
-			</div>
-		</div>
-
-		<div class="p-2" />
-
-		<!-- Vehicles Card-->
-		<div class="card bg-base-200 w-full text-neutral-content">
-			<div class="card-body">
-				<!-- Vehicles Card Title -->
-				<div id="title" class="text-3xl font-bold pb-4">Vehicles</div>
 			</div>
 		</div>
 
@@ -208,8 +420,8 @@
 						<select class="select select-bordered" id="locations-dropdown" bind:value={selectedAlgorithm}>
 							<option value={null} disabled selected>Select a VRP solver</option>
 							<option value="aco" disabled>Ant Colony Optimization</option>
-							<option value="ga" disabled>Genetic Algorithm</option>
-							<option value="sa">Simulated Annealing</option>
+							<option value="ga">Genetic Algorithm</option>
+							<option value="sa" disabled>Simulated Annealing</option>
 						</select>
 					</div>
 
@@ -220,6 +432,56 @@
 				</div>
 
 				<!-- Algorithm Options -->
+				{#if selectedAlgorithm === 'ga' && showMetaParameters}
+					<!-- [GA] Multi-threaded Selection -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="locations-dropdown">
+								<span class="label-text">Multi-threaded</span>
+							</label>
+							<select class="select select-bordered" id="locations-dropdown" bind:value={gaMultiThreaded}>
+								<option value={false} selected>False</option>
+								<option value={true} disabled>True</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- [GA] Iteration Count -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="ga-iter-count">
+								<span class="label-text">Iteration Count</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="ga-iter-count"
+								bind:value={_gaIterationCount} />
+							<label class="label" for="ga-iter-count">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [GA] Random Permutation Count -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="ga-random-count">
+								<span class="label-text">Random Permutation Count</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="ga-random-count"
+								bind:value={_gaRandomPermutationCount} />
+							<label class="label" for="ga-random-count">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+				{/if}
 				<!--
 				{#if selectedAlgorithm === 'sa'}
 					<SimulatedAnnealing bind:parameters={saParameters} showExplanations />
@@ -228,7 +490,14 @@
 
 				<div class="flex flex-row place-content-end justify-items-end">
 					<div>
-						<button class="btn btn-ghost">Show Meta Parameters</button>
+						<button
+							class="btn btn-ghost"
+							on:click={() => {
+								showMetaParameters = !showMetaParameters;
+							}}>
+							{showMetaParameters ? 'Hide' : 'Show'} Meta Parameters
+						</button>
+
 					</div>
 				</div>
 			</div>
@@ -256,37 +525,48 @@
 
 					<div class="flex flex-row place-content-end justify-items-end" />
 				{:else}
+					<!-- Result Descriptors -->
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Solution Name -- Input -->
 						<div class="form-control" style="min-width: 28rem">
 							<label class="label" for="solution-name">
 								<span class="label-text">Solution Name</span>
 							</label>
-							<input type="text" class="input input-bordered w-full" id="solution-name" />
+							<input type="text" class="input input-bordered w-full" id="solution-name" bind:value={solutionName} />
+							<label class="label" for="solution-name">
+								<span class="label-text text-gray-500"> Give a simple name to your solution to recognize it. </span>
+							</label>
 						</div>
 
-						<div class="divider lg:divider-horizontal" />
-						<div class="max-w-md">
-							<p>Provide a name for the solution to be saved to the database.</p>
-						</div>
-					</div>
+						<div class="p-4" />
 
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Solution Description -- Input -->
 						<div class="form-control" style="min-width: 28rem">
 							<label class="label" for="solution-desc">
 								<span class="label-text">Solution Description</span>
 							</label>
-							<input type="text" class="input input-bordered w-full" id="solution-desc" />
-						</div>
-
-						<div class="divider lg:divider-horizontal" />
-						<div class="max-w-md">
-							<p>Provide a description for the solution (optional).</p>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="solution-desc"
+								bind:value={solutionDescription} />
+							<label class="label" for="solution-desc">
+								<span class="label-text text-gray-500">
+									<p>Provide a description for the solution.</p>
+								</span>
+							</label>
 						</div>
 					</div>
 
 					<div class="flex flex-row place-content-end justify-items-end">
 						<div>
-							<button class="btn btn-secondary">Inspect API Call</button>
+							<button
+								class="btn btn-secondary"
+								on:click={() => {
+									showApiCall = true;
+								}}>
+								Inspect API Call
+							</button>
 						</div>
 						<div class="p-1" />
 						<button class={`btn btn-primary`} on:click={solve}> Solve </button>
@@ -296,3 +576,8 @@
 		</div>
 	</div>
 </div>
+
+<InspectApiModal
+	requestBody={JSON.stringify(mergedRequestBody, null, 4)}
+	endpoint={requestEndpoint}
+	bind:open={showApiCall} />

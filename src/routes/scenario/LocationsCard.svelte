@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { LocationSet } from '$lib/database/queries/locations';
+
 	import Map from '$lib/svg/Map.svelte';
+	import type { LocationGroup } from '$lib/types/map';
 	import { fade } from 'svelte/transition';
 
-	export let locations: LocationSet[] | null = null;
+	export let locations: LocationGroup[] | null = null;
 
 	let selection = false;
 	$: selected = locations ? locations.map((_) => false) : [];

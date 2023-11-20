@@ -8,6 +8,8 @@ export type Solution = {
 	id: number;
 	name: string;
 	description: string;
+	created_at: string;
+	owner: string;
 	vehicles: VehiclePlan[];
 	locations: MapLocation[];
 };
@@ -25,5 +27,7 @@ export type DurationMatrix = {
 	id: number;
 	name: string;
 	description: string;
+	created_at: string;
+	owner: string;
 	matrix: number[][][];
 };

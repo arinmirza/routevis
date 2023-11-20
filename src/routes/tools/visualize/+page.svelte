@@ -35,4 +35,4 @@
 {:else}
 	<VisualizerSelection {solutions} bind:selectedSolutionId bind:visualize/>
 {/if}
-<VisualizerControls {solutions} bind:selectedSolutionId bind:currentTime />
+<VisualizerControls {solutions} bind:selectedSolutionId bind:currentTime bind:visualize/>

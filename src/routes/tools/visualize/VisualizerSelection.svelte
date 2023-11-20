@@ -7,6 +7,17 @@
 
 	$: selectedSolutionId, console.log("selected soltuion", selectedSolutionId)
 
+	function findById<T extends { id: K }, K>(array: T[], id: K) {
+		return array.find((elem) => elem?.id === id);
+	}
+
+	function prettyTimestamp(ts: string) {
+		if (!ts) return '';
+		const date = ts.split('T')?.[0];
+		const time = ts.split('T')?.[1]?.split('.')?.[0];
+		return `${date} ${time}`;
+	}
+
 
 </script>
 
@@ -26,14 +37,21 @@
 
 
                     <div class="form-control p-4">
-                        <select class="select select-bordered" bind:value={selectedSolutionId}>
+                        <select class="select select-bordered" id="solution-select" bind:value={selectedSolutionId}>
                 
                             <option selected disabled value={null}>Select a solution</option>
                             {#each solutions as solution}
-                                <option value={solution.id}>{solution.name}</option>
+                                <option value={solution.id}>[{prettyTimestamp(solution.created_at)}] {solution.name}</option>
                             {/each}
                         </select>
+						<label class="label" for="soltuion-select">
+							<span class="label-text text-gray-500">
+								<span class="font-bold">Description: </span>
+								{findById(solutions, selectedSolutionId)?.description ?? ''}
+							</span>
+						</label>
                     </div>
+
 
 					<button class={`btn ${selectedSolutionId === null ? 'btn-disabled' : 'btn-primary'}`} on:click={() => visualize = true }>OK</button>
 
