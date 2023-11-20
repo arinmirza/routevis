@@ -20,7 +20,7 @@ export async function POST(event) {
     
     console.log('data')
 
-    axios.post(
+    let response = await axios.post(
         'https://vrpms-rpke.vercel.app/api/vrp/ga', data,
         {
             headers: {
@@ -28,8 +28,10 @@ export async function POST(event) {
             }
         }
     );
+
+    
   
     // it's common to return JSON, so SvelteKit has a helper
-    return json({ success: true })
+    return json({ success: true, data })
   }
   
