@@ -14,7 +14,7 @@ export interface Database {
           created_at: string
           description: string
           id: number
-          json: Json
+          matrix: Json
           name: string
           owner: string
         }
@@ -22,7 +22,7 @@ export interface Database {
           created_at?: string
           description: string
           id?: number
-          json: Json
+          matrix: Json
           name: string
           owner: string
         }
@@ -30,7 +30,7 @@ export interface Database {
           created_at?: string
           description?: string
           id?: number
-          json?: Json
+          matrix?: Json
           name?: string
           owner?: string
         }
@@ -41,7 +41,7 @@ export interface Database {
           created_at: string
           description: string
           id: number
-          json: Json
+          locations: Json
           name: string
           owner: string
         }
@@ -49,7 +49,7 @@ export interface Database {
           created_at?: string
           description: string
           id?: number
-          json: Json
+          locations: Json
           name: string
           owner: string
         }
@@ -57,7 +57,7 @@ export interface Database {
           created_at?: string
           description?: string
           id?: number
-          json?: Json
+          locations?: Json
           name?: string
           owner?: string
         }
@@ -67,6 +67,8 @@ export interface Database {
         Row: {
           created_at: string
           description: string
+          durationMax: number
+          durationSum: number
           id: number
           locations: Json
           name: string
@@ -76,8 +78,10 @@ export interface Database {
         Insert: {
           created_at?: string
           description: string
+          durationMax?: number
+          durationSum?: number
           id?: number
-          locations?: Json
+          locations: Json
           name: string
           owner: string
           vehicles: Json
@@ -85,6 +89,8 @@ export interface Database {
         Update: {
           created_at?: string
           description?: string
+          durationMax?: number
+          durationSum?: number
           id?: number
           locations?: Json
           name?: string

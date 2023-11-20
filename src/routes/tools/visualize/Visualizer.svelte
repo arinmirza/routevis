@@ -17,7 +17,14 @@
     // Vehicle Simulators
     let simulators: VehicleController[] = [];
     $: simulators = solution.vehicles.map(plan => new VehicleController(plan));
-    $: colors = simulators.map(_ => randomColor());
+    $: colors = simulators.map((_, i) => {
+		if (i == 0) return "red";
+		if (i == 1) return "blue";
+		if (i == 2) return "orange";
+		if (i == 3) return "brown";
+		if (i == 4) return "magenta";
+		return randomColor()
+	});
 
 
     // Coloring
@@ -39,7 +46,7 @@
 
         <!-- Display each location as a map marker -->
 		{#each solution.locations as location, i}
-			<Marker latLng={[location.lat, location.lng]}>
+			<Marker lat={location.lat} lng={location.lng}>
 				<MapMarker />
 				<Popup>{location.name} ({i}) <br> {location.lat}, {location.lng}</Popup>
 			</Marker>

@@ -1,5 +1,5 @@
+import type { LocationGroup, MapLocation } from '$lib/types/map';
 import { list } from '$lib/utils';
-import type { My } from '../../../routes/types';
 
 export class LocationsQuery {
 	readonly _username: string;
@@ -13,6 +13,6 @@ export class LocationsQuery {
 	async all() {
 		const { data, error } = await this._supabase.from('locations').select();
 		error && console.error('LocationsQuery:', error);
-		return list(data).map(row => row.json)
+		return list(data).map(x => ({...x, locations: x.locations as MapLocation[]}));
 	}
 }

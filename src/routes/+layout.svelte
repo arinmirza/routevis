@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount, setContext } from 'svelte';
+	import { getContext, onMount, setContext } from 'svelte';
 	import { writable, type Writable } from 'svelte/store';
 	import locationsPreset from '../locations-preset.json';
 	import routesPreset from '../routes-preset.json';
@@ -19,8 +19,11 @@
 	$: user = $page.data.session?.user.email;
 	$: supabase = $page.data.query._supabase;
 
+	setContext("loginModal", writable<boolean>(false));
 
-	let userModalOpen = false;
+
+
+	let loginModalOpen = getContext<Writable<boolean>>("loginModal");
 	
 
 	onMount(() => {
@@ -40,7 +43,7 @@
 {#if path === '/'}
 	<slot />
 {:else}
-	<UserModal bind:open={userModalOpen} />
+	<UserModal bind:open={$loginModalOpen} />
 
 	<div class="navbar bg-base-300">
 		<div class="flex-1">
@@ -48,7 +51,7 @@
 		</div>
 		<div class="flex-none gap-2">
 			<div>
-				<button class="btn btn-md btn-ghost" on:click={() => (userModalOpen = true)}> {user ?? 'Login'} </button>
+				<button class="btn btn-md btn-ghost" on:click={() => ($loginModalOpen = true)}> {user ?? 'Login'} </button>
 			</div>
 		</div>
 	</div>
@@ -109,19 +112,29 @@
 				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem;">
 					<div><Truck /></div>
 					<div class="p-1" />
-					<div class="text-xl">VRP</div>
+					<div class="text-xl">Algorithms</div>
 				</div>
 
 				<li>
-					<a class={`${path === '/compute' ? 'active' : ''}`} href="/compute">Computation</a>
+					<a class={`${path === '/algorithms/vrp' ? 'active' : ''}`} href="/algorithms/vrp">Vehicle Routing Problem</a>
 				</li>
 
 				<li>
-					<a class={`${path === '/vrp/compare' ? 'active' : ''}`} href="/benchmark">Benchmarks</a>
+					<a class={`${path === '/algorithms/tsp' ? 'active' : ''}`} href="/algorithms/tsp">Travelling Salesman Problem</a>
+				</li>
+
+				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem;">
+					<div><Toolset /></div>
+					<div class="p-1" />
+					<div class="text-xl">Tools</div>
+				</div>
+
+				<li>
+					<a class={`${path === '/tools/benchmark' ? 'active' : ''}`} href="/tools/benchmark">Benchmarking</a>
 				</li>
 
 				<li>
-					<a class={`${path === '/visualize' ? 'active' : ''}`} href="/visualize"> Visualization </a>
+					<a class={`${path === '/tools/visualize' ? 'active' : ''}`} href="/tools/visualize"> Visualization </a>
 				</li>
 
 				<!-- Data -->

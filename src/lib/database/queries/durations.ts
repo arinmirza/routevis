@@ -12,6 +12,6 @@ export class DurationsQuery {
 	async all() {
 		const { data, error } = await this._supabase.from('durations').select();
 		error && console.error('DurationsQuery:', error);
-		return list(data).map(x => x.json)
+		return list(data).map(x => ({...x, matrix: x.matrix as number[][][]}))
 	}
 }

@@ -1,7 +1,4 @@
 <script lang="ts">
-	import type { DurationMatrix } from '$lib/database/queries/durations';
-	import type { LocationSet } from '$lib/database/queries/locations';
-	import type { Solution } from '$lib/database/queries/solutions';
 	import type { PageData } from './$types';
 	import Map from '$lib/svg/Map.svelte';
 	import { onMount } from 'svelte';
@@ -9,11 +6,12 @@
 	import LocationsCard from './LocationsCard.svelte';
 	import DurationsCard from './DurationsCard.svelte';
 	import SolutionsCard from './SolutionsCard.svelte';
+	import type { DurationMatrix, LocationGroup, Solution } from '$lib/types/map';
 
 	export let data: PageData;
 	const { query } = data;
 
-	let locations: null | LocationSet[] = null;
+	let locations: null | LocationGroup[] = null;
 	let durations: null | DurationMatrix[] = null;
 	let solutions: null | Solution[] = null;
 
