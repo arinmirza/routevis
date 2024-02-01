@@ -7,7 +7,7 @@
 	import type { DurationMatrix, LocationGroup, Solution } from '$lib/types/map';
 	import axios from 'axios';
 	import InspectApiModal from '$lib/components/debug/InspectAPIModal.svelte';
-	import { fade } from "svelte/transition";
+	import { fade } from 'svelte/transition';
 
 	export let data: PageData;
 
@@ -52,52 +52,40 @@
 	let durationsKey: number;
 
 	/* Common Form Parameters */
-	let _vehicleCapacity: string = '1';
-	let _vehicleCount: string = '1';
-	$: vehicleCapacity = nonNegativeInt(_vehicleCapacity);
-	$: vehicleCount = nonNegativeInt(_vehicleCount);
-	$: vehicleCount, (() => (_startTimesOfVehicles = Array(vehicleCount).fill(0).join(', ')))();
-
-	/* Advanced Form Parameters */
-	let _ignoredCustomers: string = '';
-	let _completedCustomers: string = '';
-	let _startTimesOfVehicles: string = '';
-	$: ignoredCustomers = _ignoredCustomers ? _ignoredCustomers.split(',').map((id) => nonNegativeInt(id)) : [];
-	$: completedCustomers = _completedCustomers ? _completedCustomers.split(',').map((id) => nonNegativeInt(id)) : [];
-	$: startTimesOfVehicles = _startTimesOfVehicles.split(',').map((id) => nonNegativeInt(id));
-	$: vehicleCapacities = Array(vehicleCount).fill(vehicleCapacity);
+	let customers = '';
+	let startNode = '';
+	let startTime = '';
+	let doLoadingUnloading = true;
+	let cancelledCustomers = '';
 
 	/* Solution Describers */
 	let solutionName: string = '';
 	let solutionDescription: string = '';
 
-	/* Simulated Annealing Parameters */
-	let sa_initialTemperature = '';
-	let sa_cooldownFactor = '';
-	let sa_slowdownFactor = '';
-	let sa_iterationCount = '';
-
 	/* Ant Colony Optimization Parameters */
-	let aco_nHyperparams = "";
-	let aco_considerDepot = '';
-	let aco_pheromoneUseFirstHour = '';
-	let aco_ignoreLongTrip = '';
-	let aco_objectiveFunctionType = '';
+	let aco_nHyperparams = '3';
+	//let aco_considerDepot = '';
+	//let aco_pheromoneUseFirstHour = '';
+	//let aco_ignoreLongTrip = '';
 
 	/* Genetic Algorithm Parametes */
 	let ga_multiThreaded: boolean = false;
 	let ga_randomPermutationCount: string = '100';
 	let ga_iterationCount: string = '10';
 
+    let sa_cooldownFactor = '';
+    let sa_iterationCount = '';
+    let sa_initialTemperature = '';
+
 	$: requestEndpoint = getEndpoint(selectedAlgorithm);
 
 	function getEndpoint(selected: string | null) {
 		console.log('getendpoint', selected);
 		switch (selected) {
-			case "ga":
-				return "https://vrpms-rpke.vercel.app/api/vrp/ga"
-			case "aco":
-				return "https://vrpms-git-metehan-aco-mefarnis-projects.vercel.app/api/vrp/aco"
+			case 'ga':
+				return 'https://vrpms-rpke.vercel.app/api/tsp/ga';
+			case 'aco':
+				return 'https://vrpms-git-metehan-aco-mefarnis-projects.vercel.app/api/tsp/aco';
 		}
 		return '<ENDPOINT>';
 	}
@@ -116,13 +104,12 @@
 					solutionDescription,
 					locationsKey,
 					durationsKey,
-					capacities: vehicleCapacities,
-					startTimes: startTimesOfVehicles,
-					ignoredCustomers,
-					completedCustomers,
+                    customers: customers ? customers.split(',').map((id) => nonNegativeInt(id)) : [],
+					startTime: nonNegativeInt(startTime),
+                    startNode: nonNegativeInt(startNode),
+                    do_loading_unloading: doLoadingUnloading,
+                    cancel_customers: cancelledCustomers ? cancelledCustomers.split(',').map((id) => nonNegativeInt(id)) : [],
 					auth: session?.access_token,
-					max_k: -1,
-					k_lower_limit: true,
 
 					/* Algorithm specific parameters */
 					...(selectedAlgorithm === 'ga' && {
@@ -130,17 +117,9 @@
 						iterationCount: nonNegativeInt(ga_iterationCount),
 						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
 					}),
-					...(selectedAlgorithm === 'sa' && {
-						cooldownFactor: nonNegativeInt(sa_cooldownFactor),
-						slowdownFactor: nonNegativeInt(sa_slowdownFactor),
-						iterationCount: nonNegativeInt(sa_iterationCount),
-						initialTemperature: nonNegativeInt(sa_initialTemperature)
-					}),
 					...(selectedAlgorithm === 'aco' && {
+						// TODO
 						n_hyperparams: nonNegativeInt(aco_nHyperparams),
-						considerDepot: aco_considerDepot,
-						ignoreLongTrip: aco_ignoreLongTrip,
-						pheromoneUseFirstHour: aco_pheromoneUseFirstHour
 					})
 				},
 				{
@@ -261,16 +240,16 @@
 					</div>
 				</div>
 
-				<!-- Vehicle Count  -->
+				<!-- TSP Customers  -->
 				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 					<!-- Input -->
 					<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-						<label class="label" for="vehicle-count">
-							<span class="label-text">Vehicle Count</span>
+						<label class="label" for="customers">
+							<span class="label-text">Customers</span>
 						</label>
-						<input type="text" class="input input-bordered w-full" id="vehicle-count" bind:value={_vehicleCount} />
-						<label class="label" for="vehicle-count">
-							<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+						<input type="text" class="input input-bordered w-full" id="customers" bind:value={customers} />
+						<label class="label" for="customers">
+							<span class="label-text text-gray-500"> Provide a list of comma separated non-negative integers. </span>
 						</label>
 					</div>
 
@@ -278,23 +257,19 @@
 
 					<!-- Description -->
 					<div class="max-w-md">
-						<p>The number of vehicles in your fleet.</p>
+						<p>These customers will be considered in the TSP calculation.</p>
 					</div>
 				</div>
 
-				<!-- Vehicle Capacity  -->
+				<!-- TSP Start Node  -->
 				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 					<!-- Input -->
 					<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-						<label class="label" for="vehicle-capacity">
-							<span class="label-text">Vehicle Capacity</span>
+						<label class="label" for="start-node">
+							<span class="label-text">Starting Node</span>
 						</label>
-						<input
-							type="text"
-							class="input input-bordered w-full"
-							id="vehicle-capacity"
-							bind:value={_vehicleCapacity} />
-						<label class="label" for="vehicle-capacity">
+						<input type="text" class="input input-bordered w-full" id="start-node" bind:value={startNode} />
+						<label class="label" for="start-node">
 							<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
 						</label>
 					</div>
@@ -303,24 +278,45 @@
 
 					<!-- Description -->
 					<div class="max-w-md">
-						<p>Unit capacity of each vehicle.</p>
+						<p>The vehicle will start the tour at this location.</p>
+					</div>
+				</div>
+
+				<!-- TSP Start Time  -->
+				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+					<!-- Input -->
+					<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+						<label class="label" for="start-time">
+							<span class="label-text">Starting Time</span>
+						</label>
+						<input type="text" class="input input-bordered w-full" id="start-time" bind:value={startTime} />
+						<label class="label" for="start-time">
+							<span class="label-text text-gray-500"> Provide a non-negative integer (seconds from day start). </span>
+						</label>
+					</div>
+
+					<div class="divider lg:divider-horizontal" />
+
+					<!-- Description -->
+					<div class="max-w-md">
+						<p>The vehicle will start the tour at this time.</p>
 					</div>
 				</div>
 
 				{#if showAdvancedParameters}
-					<!-- Ignored Customers  -->
+					<!-- Cancelled Customers  -->
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 						<!-- Input -->
 						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="ignored-customers">
-								<span class="label-text">Ignored Customers</span>
+							<label class="label" for="cancelled-customers">
+								<span class="label-text">Cancelled Customers</span>
 							</label>
 							<input
 								type="text"
 								class="input input-bordered w-full"
-								id="ignored-customers"
-								bind:value={_ignoredCustomers} />
-							<label class="label" for="ignored-customers">
+								id="cancelled-customers"
+								bind:value={cancelledCustomers} />
+							<label class="label" for="cancelled-customers">
 								<span class="label-text text-gray-500">
 									Provide a list of comma separated non-negative integers representing the customer (location) ids.
 								</span>
@@ -332,66 +328,30 @@
 						<!-- Description -->
 						<div class="max-w-md">
 							<p>
-								Customers to be ignored even though they are included in the selected location set. Relevant if a
-								customer cannot be served or cancelled for the day.
+								The list of cancelled customers whose demands were already loaded into the vehicle. Hence their demands
+								must be considered in unloading times.
 							</p>
 						</div>
 					</div>
 
-					<!-- Completed Customers  -->
+					<!-- TSP Loading Unloading  -->
+
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
 						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="completed-customers">
-								<span class="label-text">Completed Customers</span>
+							<label class="label" for="load-unload">
+								<span class="label-text">Consider Load/Unload Times</span>
 							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="completed-customers"
-								bind:value={_completedCustomers} />
-							<label class="label" for="completed-customers">
-								<span class="label-text text-gray-500">
-									Provide a list of comma separated non-negative integers representing the customer (location) ids.
-								</span>
-							</label>
+							<select class="select select-bordered" id="load-unload" bind:value={doLoadingUnloading}>
+								<option value={true} selected>True</option>
+								<option value={false}>False</option>
+							</select>
 						</div>
 
 						<div class="divider lg:divider-horizontal" />
 
 						<!-- Description -->
 						<div class="max-w-md">
-							<p>
-								Customers to be ignored from the selected location set because they were already completed. Relevant for
-								VRP refinement calls.
-							</p>
-						</div>
-					</div>
-
-					<!-- Start Times of Vehicles -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="start-times">
-								<span class="label-text">Start Times of Vehicles</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="start-times"
-								bind:value={_startTimesOfVehicles} />
-							<label class="label" for="duration-select">
-								<span class="label-text text-gray-500">
-									Provide a list of comma separated non-negative integers representing seconds after shift start.
-								</span>
-							</label>
-						</div>
-
-						<div class="divider lg:divider-horizontal" />
-
-						<!-- Description -->
-						<div class="max-w-md">
-							<p>The closest availability times of the vehicles at the warehouse. Relevant for VRP refinement calls.</p>
+							<p>Consider the loading/unloading times of the supplies into/from the vehicle.</p>
 						</div>
 					</div>
 				{/if}
@@ -427,7 +387,7 @@
 							<span class="label-text">Algorithm</span>
 						</label>
 						<select class="select select-bordered" id="locations-dropdown" bind:value={selectedAlgorithm}>
-							<option value={null} disabled selected>Select a VRP solver</option>
+							<option value={null} disabled selected>Select a TSP solver</option>
 							<option value="aco">Ant Colony Optimization</option>
 							<option value="ga">Genetic Algorithm</option>
 							<option value="sa">Simulated Annealing</option>
@@ -436,7 +396,7 @@
 
 					<div class="divider lg:divider-horizontal" />
 					<div class="max-w-md">
-						<p>Algorithm to solve the time-dependent multi-vehicle routing problem.</p>
+						<p>Algorithm to solve the time-dependent travelling salesman problem.</p>
 					</div>
 				</div>
 
@@ -530,25 +490,8 @@
 						</div>
 					</div>
 
-					<!-- [SA] Cooldown Factor -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="sa-slowdown-factor">
-								<span class="label-text">Slowdown Factor</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="sa-slowdown-factor"
-								bind:value={sa_slowdownFactor} />
-							<label class="label" for="sa-slowdown-factor">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
-						</div>
-					</div>
 
-					<!-- [SA] Slowdown Factor -->
+					<!-- [SA] Cooldown Factor -->
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 						<!-- Input -->
 						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
@@ -588,11 +531,7 @@
 							<label class="label" for="ga-iter-count">
 								<span class="label-text">Number of Hyperparameters</span>
 							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="ga-iter-count"
-								bind:value={aco_nHyperparams} />
+							<input type="text" class="input input-bordered w-full" id="ga-iter-count" bind:value={aco_nHyperparams} />
 							<label class="label" for="ga-iter-count">
 								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
 							</label>
@@ -704,8 +643,7 @@
 					<div class="max-w-64 text-wrap">
 						{#if response?.data?.success}
 							<p>
-								<b>Success!</b> A solution with <b>{response?.data?.message?.durationMax}</b> seconds of max duration
-								and <b>{response?.data?.message?.durationSum}</b> seconds of total duration was found.
+								<b>Success!</b> A solution with <b>{response?.data?.message?.duration}</b> seconds of duration was found.
 							</p>
 							<p>
 								The solution is saved under the name "<b>{solutionName}</b>" and can be displayed using the
@@ -719,16 +657,16 @@
 						{/if}
 					</div>
 				{:else}
-				<div transition:fade class="flex place-content-center">
-					<div class="max-w-md">
-						<progress class="progress min-w-md" />
-						<div class="text-center pt-4">
-							<div>Solving, this may take a minute or two...</div>
-							<div>The result will be saved in the database.</div>
-							<div>You can leave this page, or wait for the response.</div>
+					<div transition:fade class="flex place-content-center">
+						<div class="max-w-md">
+							<progress class="progress min-w-md" />
+							<div class="text-center pt-4">
+								<div>Solving, this may take a minute or two...</div>
+								<div>The result will be saved in the database.</div>
+								<div>You can leave this page, or wait for the response.</div>
+							</div>
 						</div>
 					</div>
-				</div>
 				{/if}
 			</div>
 		</div>
@@ -738,37 +676,29 @@
 <InspectApiModal
 	requestBody={JSON.stringify(
 		{
-			/* Common parameters */
-			solutionName,
-			solutionDescription,
-			locationsKey,
-			durationsKey,
-			capacities: vehicleCapacities,
-			startTimes: startTimesOfVehicles,
-			ignoredCustomers,
-			completedCustomers,
-			auth: session?.access_token,
-			max_k: -1,
-			k_lower_limit: true,
+					/* Common parameters */
+					solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+                    customers: customers ? customers.split(',').map((id) => nonNegativeInt(id)) : [],
+					startTime: nonNegativeInt(startTime),
+                    startNode: nonNegativeInt(startNode),
+                    do_loading_unloading: doLoadingUnloading,
+                    cancel_customers: cancelledCustomers ? cancelledCustomers.split(',').map((id) => nonNegativeInt(id)) : [],
+					auth: session?.access_token,
 
-			/* Algorithm specific parameters */
-			...(selectedAlgorithm === 'ga' && {
-				multiThreaded: ga_multiThreaded,
-				iterationCount: nonNegativeInt(ga_iterationCount),
-				randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
-			}),
-			...(selectedAlgorithm === 'sa' && {
-				cooldownFactor: nonNegativeInt(sa_cooldownFactor),
-				slowdownFactor: nonNegativeInt(sa_slowdownFactor),
-				iterationCount: nonNegativeInt(sa_iterationCount),
-				initialTemperature: nonNegativeInt(sa_initialTemperature)
-			}),
-			...(selectedAlgorithm === 'aco' && {
-				considerDepot: aco_considerDepot,
-				ignoreLongTrip: aco_ignoreLongTrip,
-				pheromoneUseFirstHour: aco_pheromoneUseFirstHour
-			})
-		},
+					/* Algorithm specific parameters */
+					...(selectedAlgorithm === 'ga' && {
+						multiThreaded: ga_multiThreaded,
+						iterationCount: nonNegativeInt(ga_iterationCount),
+						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
+					}),
+					...(selectedAlgorithm === 'aco' && {
+						// TODO
+						n_hyperparams: nonNegativeInt(aco_nHyperparams),
+					})
+				},
 		null,
 		4
 	)}

@@ -151,7 +151,7 @@
 				</div>
 
 				<li>
-					<a class={`${path === '/locations' ? 'active' : ''}`} href="/scenario">Saved Scenarios</a>
+					<a class={`${path === '/database' ? 'active' : ''}`} href="/database">Saved Data</a>
 				</li>
 
 				<!--
