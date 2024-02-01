@@ -7,6 +7,7 @@
 	import type { DurationMatrix, LocationGroup, Solution } from '$lib/types/map';
 	import axios from 'axios';
 	import InspectApiModal from '$lib/components/debug/InspectAPIModal.svelte';
+	import { fade } from "svelte/transition";
 
 	export let data: PageData;
 
@@ -29,8 +30,10 @@
 	/* Algorithm Selection */
 	let selectedAlgorithm: 'sa' | 'ga' | 'aco' | null = null;
 
-	/* Helper type definitions */
-	type VehicleInput = { capacity: number; startTime: number };
+	/* Technical variables */
+	let waitingResponse = false;
+	let receivedResponse = false;
+	let response: any;
 
 	/* Helper methods */
 	function nonNegativeInt(str: string) {
@@ -60,7 +63,7 @@
 	let _completedCustomers: string = '';
 	let _startTimesOfVehicles: string = '';
 	$: ignoredCustomers = _ignoredCustomers ? _ignoredCustomers.split(',').map((id) => nonNegativeInt(id)) : [];
-	$: completedCustomers = _completedCustomers ? _completedCustomers.split(',').map((id) => nonNegativeInt(id)) : []; 
+	$: completedCustomers = _completedCustomers ? _completedCustomers.split(',').map((id) => nonNegativeInt(id)) : [];
 	$: startTimesOfVehicles = _startTimesOfVehicles.split(',').map((id) => nonNegativeInt(id));
 	$: vehicleCapacities = Array(vehicleCount).fill(vehicleCapacity);
 
@@ -69,81 +72,89 @@
 	let solutionDescription: string = '';
 
 	/* Simulated Annealing Parameters */
-	let initialTemperature = 50;
-	let cooldownFactor = 50;
-	let iterationCount = 50;
-	let terminateAfter = 50;
-	let equalWorkIncentive = 50;
+	let sa_initialTemperature = '';
+	let sa_cooldownFactor = '';
+	let sa_slowdownFactor = '';
+	let sa_iterationCount = '';
 
 	/* Ant Colony Optimization Parameters */
-	// TODO
+	let aco_nHyperparams = "";
+	let aco_considerDepot = '';
+	let aco_pheromoneUseFirstHour = '';
+	let aco_ignoreLongTrip = '';
+	let aco_objectiveFunctionType = '';
 
 	/* Genetic Algorithm Parametes */
-	let gaMultiThreaded: boolean = false;
-	let _gaRandomPermutationCount: string = '1000';
-	let _gaIterationCount: string = '2000';
-	$: gaRandomPermutationCount = nonNegativeInt(_gaRandomPermutationCount);
-	$: gaIterationCount = nonNegativeInt(_gaIterationCount);
+	let ga_multiThreaded: boolean = false;
+	let ga_randomPermutationCount: string = '100';
+	let ga_iterationCount: string = '10';
 
-	/* Post Request Body */
-	$: commonRequestBody = {
-		solutionName,
-		solutionDescription,
-		locationsKey,
-		durationsKey,
-		capacities: vehicleCapacities,
-		startTimes: startTimesOfVehicles,
-		ignoredCustomers,
-		completedCustomers,
-		auth: session?.access_token
-	};
-
-	$: specialRequestBody = getSpecialRequestBody(selectedAlgorithm);
-	$: mergedRequestBody = { ...commonRequestBody, ...specialRequestBody };
 	$: requestEndpoint = getEndpoint(selectedAlgorithm);
 
-	function getSpecialRequestBody(selected: string | null) {
-		if (selected === 'ga') {
-			return {
-				multiThreaded: gaMultiThreaded,
-				iterationCount: gaIterationCount,
-				randomPermutationCount: gaRandomPermutationCount
-			};
-		}
-		return {};
-	}
-
 	function getEndpoint(selected: string | null) {
-		if (selected === 'ga') {
-			return 'https://vrpms-rpke.vercel.app/api/vrp/ga';
+		console.log('getendpoint', selected);
+		switch (selected) {
+			case "ga":
+				return "https://vrpms-rpke.vercel.app/api/vrp/ga"
+			case "aco":
+				return "https://vrpms-git-metehan-aco-mefarnis-projects.vercel.app/api/vrp/aco"
 		}
 		return '<ENDPOINT>';
 	}
 
-	function solve() {
-		let auth = session?.access_token;
-		axios.post(
-			requestEndpoint,
-			{
-				solutionName,
-				solutionDescription,
-				locationsKey,
-				durationsKey,
-				capacities: vehicleCapacities,
-				startTimes: startTimesOfVehicles,
-				iterationCount: gaIterationCount,
-				randomPermutationCount: gaRandomPermutationCount,
-				multiThreaded: gaMultiThreaded,
-				ignoredCustomers,
-				completedCustomers,
-				auth
-			},
-			{
-				headers: {
-					'Content-Type': 'application/json'
+	async function solve() {
+		console.log('Sending request to endpoint:', requestEndpoint);
+
+		waitingResponse = true;
+
+		try {
+			response = await axios.post(
+				requestEndpoint,
+				{
+					/* Common parameters */
+					solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+					capacities: vehicleCapacities,
+					startTimes: startTimesOfVehicles,
+					ignoredCustomers,
+					completedCustomers,
+					auth: session?.access_token,
+					max_k: -1,
+					k_lower_limit: true,
+
+					/* Algorithm specific parameters */
+					...(selectedAlgorithm === 'ga' && {
+						multiThreaded: ga_multiThreaded,
+						iterationCount: nonNegativeInt(ga_iterationCount),
+						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
+					}),
+					...(selectedAlgorithm === 'sa' && {
+						cooldownFactor: nonNegativeInt(sa_cooldownFactor),
+						slowdownFactor: nonNegativeInt(sa_slowdownFactor),
+						iterationCount: nonNegativeInt(sa_iterationCount),
+						initialTemperature: nonNegativeInt(sa_initialTemperature)
+					}),
+					...(selectedAlgorithm === 'aco' && {
+						n_hyperparams: nonNegativeInt(aco_nHyperparams),
+						considerDepot: aco_considerDepot,
+						ignoreLongTrip: aco_ignoreLongTrip,
+						pheromoneUseFirstHour: aco_pheromoneUseFirstHour
+					})
+				},
+				{
+					headers: {
+						'Content-Type': 'application/json'
+					}
 				}
-			}
-		);
+			);
+		} catch {
+			response = { error: 'Invalid request.' };
+		}
+
+		waitingResponse = false;
+		receivedResponse = true;
 	}
 
 	function findById<T extends { id: K }, K>(array: T[], id: K) {
@@ -162,7 +173,7 @@
 		(async () => {
 			loadingDurations = true;
 			durations = await data.query.durations.all();
-			console.debug('durations:', locations);
+			console.debug('durations:', durations);
 			loadingDurations = false;
 			durationsKey = durations?.[0].id;
 		})();
@@ -226,7 +237,7 @@
 						<label class="label" for="duration-select">
 							<span class="label-text">Duration Matrix</span>
 						</label>
-						<select class="select select-bordered" id="duration-select">
+						<select class="select select-bordered" id="duration-select" bind:value={durationsKey}>
 							{#each durations as duration}
 								<option value={duration.id}>{duration.name}</option>
 							{/each}
@@ -417,9 +428,9 @@
 						</label>
 						<select class="select select-bordered" id="locations-dropdown" bind:value={selectedAlgorithm}>
 							<option value={null} disabled selected>Select a VRP solver</option>
-							<option value="aco" disabled>Ant Colony Optimization</option>
+							<option value="aco">Ant Colony Optimization</option>
 							<option value="ga">Genetic Algorithm</option>
-							<option value="sa" disabled>Simulated Annealing</option>
+							<option value="sa">Simulated Annealing</option>
 						</select>
 					</div>
 
@@ -430,6 +441,7 @@
 				</div>
 
 				<!-- Algorithm Options -->
+
 				{#if selectedAlgorithm === 'ga' && showMetaParameters}
 					<!-- [GA] Multi-threaded Selection -->
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
@@ -437,7 +449,7 @@
 							<label class="label" for="locations-dropdown">
 								<span class="label-text">Multi-threaded</span>
 							</label>
-							<select class="select select-bordered" id="locations-dropdown" bind:value={gaMultiThreaded}>
+							<select class="select select-bordered" id="locations-dropdown" bind:value={ga_multiThreaded}>
 								<option value={false} selected>False</option>
 								<option value={true} disabled>True</option>
 							</select>
@@ -455,7 +467,7 @@
 								type="text"
 								class="input input-bordered w-full"
 								id="ga-iter-count"
-								bind:value={_gaIterationCount} />
+								bind:value={ga_iterationCount} />
 							<label class="label" for="ga-iter-count">
 								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
 							</label>
@@ -473,18 +485,138 @@
 								type="text"
 								class="input input-bordered w-full"
 								id="ga-random-count"
-								bind:value={_gaRandomPermutationCount} />
+								bind:value={ga_randomPermutationCount} />
 							<label class="label" for="ga-random-count">
 								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
 							</label>
 						</div>
 					</div>
 				{/if}
-				<!--
-				{#if selectedAlgorithm === 'sa'}
-					<SimulatedAnnealing bind:parameters={saParameters} showExplanations />
+
+				{#if selectedAlgorithm === 'sa' && showMetaParameters}
+					<!-- [SA] Iteration Count -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="sa-iter-count">
+								<span class="label-text">Iteration Count</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="sa-iter-count"
+								bind:value={sa_iterationCount} />
+							<label class="label" for="sa-iter-count">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [SA] Initial Temperature -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="sa-initial-temperature">
+								<span class="label-text">Initial Temperature</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="sa-initial-temperature"
+								bind:value={sa_initialTemperature} />
+							<label class="label" for="sa-initial-temperature">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [SA] Cooldown Factor -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="sa-slowdown-factor">
+								<span class="label-text">Slowdown Factor</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="sa-slowdown-factor"
+								bind:value={sa_slowdownFactor} />
+							<label class="label" for="sa-slowdown-factor">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [SA] Slowdown Factor -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="sa-cooldown-factor">
+								<span class="label-text">Cooldown Factor</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="sa-cooldown-factor"
+								bind:value={sa_cooldownFactor} />
+							<label class="label" for="sa-cooldown-factor">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
 				{/if}
-				-->
+
+				{#if selectedAlgorithm === 'aco' && showMetaParameters}
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="locations-dropdown">
+								<span class="label-text">Multi-threaded</span>
+							</label>
+							<select class="select select-bordered" id="locations-dropdown" bind:value={ga_multiThreaded}>
+								<option value={false} selected>False</option>
+								<option value={true} disabled>True</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="ga-iter-count">
+								<span class="label-text">Number of Hyperparameters</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="ga-iter-count"
+								bind:value={aco_nHyperparams} />
+							<label class="label" for="ga-iter-count">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="ga-random-count">
+								<span class="label-text">Random Permutation Count</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="ga-random-count"
+								bind:value={ga_randomPermutationCount} />
+							<label class="label" for="ga-random-count">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+				{/if}
 
 				<div class="flex flex-row place-content-end justify-items-end">
 					<div>
@@ -495,7 +627,6 @@
 							}}>
 							{showMetaParameters ? 'Hide' : 'Show'} Meta Parameters
 						</button>
-
 					</div>
 				</div>
 			</div>
@@ -522,7 +653,7 @@
 					</div>
 
 					<div class="flex flex-row place-content-end justify-items-end" />
-				{:else}
+				{:else if session && !waitingResponse && !receivedResponse}
 					<!-- Result Descriptors -->
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 						<!-- Solution Name -- Input -->
@@ -569,6 +700,35 @@
 						<div class="p-1" />
 						<button class={`btn btn-primary`} on:click={solve}> Solve </button>
 					</div>
+				{:else if receivedResponse}
+					<div class="max-w-64 text-wrap">
+						{#if response?.data?.success}
+							<p>
+								<b>Success!</b> A solution with <b>{response?.data?.message?.durationMax}</b> seconds of max duration
+								and <b>{response?.data?.message?.durationSum}</b> seconds of total duration was found.
+							</p>
+							<p>
+								The solution is saved under the name "<b>{solutionName}</b>" and can be displayed using the
+								visualization tool.
+							</p>
+						{:else}
+							<p><b>Something went wrong.</b> We are dumping the received response below.</p>
+							<div class="max-w-64 text-wrap" style="max-width: 28rem;">
+								<p>{JSON.stringify(response)}</p>
+							</div>
+						{/if}
+					</div>
+				{:else}
+				<div transition:fade class="flex place-content-center">
+					<div class="max-w-md">
+						<progress class="progress min-w-md" />
+						<div class="text-center pt-4">
+							<div>Solving, this may take a minute or two...</div>
+							<div>The result will be saved in the database.</div>
+							<div>You can leave this page, or wait for the response.</div>
+						</div>
+					</div>
+				</div>
 				{/if}
 			</div>
 		</div>
@@ -576,6 +736,41 @@
 </div>
 
 <InspectApiModal
-	requestBody={JSON.stringify(mergedRequestBody, null, 4)}
+	requestBody={JSON.stringify(
+		{
+			/* Common parameters */
+			solutionName,
+			solutionDescription,
+			locationsKey,
+			durationsKey,
+			capacities: vehicleCapacities,
+			startTimes: startTimesOfVehicles,
+			ignoredCustomers,
+			completedCustomers,
+			auth: session?.access_token,
+			max_k: -1,
+			k_lower_limit: true,
+
+			/* Algorithm specific parameters */
+			...(selectedAlgorithm === 'ga' && {
+				multiThreaded: ga_multiThreaded,
+				iterationCount: nonNegativeInt(ga_iterationCount),
+				randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
+			}),
+			...(selectedAlgorithm === 'sa' && {
+				cooldownFactor: nonNegativeInt(sa_cooldownFactor),
+				slowdownFactor: nonNegativeInt(sa_slowdownFactor),
+				iterationCount: nonNegativeInt(sa_iterationCount),
+				initialTemperature: nonNegativeInt(sa_initialTemperature)
+			}),
+			...(selectedAlgorithm === 'aco' && {
+				considerDepot: aco_considerDepot,
+				ignoreLongTrip: aco_ignoreLongTrip,
+				pheromoneUseFirstHour: aco_pheromoneUseFirstHour
+			})
+		},
+		null,
+		4
+	)}
 	endpoint={requestEndpoint}
 	bind:open={showApiCall} />

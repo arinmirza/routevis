@@ -16,7 +16,7 @@
     
     // Vehicle Simulators
     let simulators: VehicleController[] = [];
-    $: simulators = solution.vehicles.map(plan => new VehicleController(plan));
+    $: simulators = solution.vehicles.filter(plan => plan.tours.flatMap(x => x).length > 0).map(plan => new VehicleController(plan));
     $: colors = simulators.map((_, i) => {
 		if (i == 0) return "red";
 		if (i == 1) return "blue";

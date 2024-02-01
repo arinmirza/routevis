@@ -99,6 +99,7 @@
 			</div>
 			-->
 
+			<!--
 				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem;">
 					<div><Home /></div>
 					<div class="p-1" />
@@ -108,6 +109,7 @@
 				<li>
 					<a class={`${path === '/welcome' ? 'active' : ''}`} href="/tutorial">Tutorial <span class="text-error">(todo)</span></a>
 				</li>
+			-->
 
 				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem;">
 					<div><Truck /></div>
@@ -120,7 +122,7 @@
 				</li>
 
 				<li>
-					<a class={`${path === '/algorithms/tsp' ? 'active' : ''}`} href="/algorithms/tsp">Travelling Salesman Problem <span class="text-error">(todo)</span></a>
+					<a class={`${path === '/algorithms/tsp' ? 'active' : ''}`} href="/algorithms/tsp">Travelling Salesman Problem</a>
 					
 				</li>
 
@@ -130,9 +132,11 @@
 					<div class="text-xl">Tools</div>
 				</div>
 
+				<!--
 				<li>
 					<a class={`${path === '/tools/benchmark' ? 'active' : ''}`} href="/tools/benchmark">Benchmarking <span class="text-error">(todo)</span></a>
 				</li>
+				-->
 
 				<li>
 					<a class={`${path === '/tools/visualize' ? 'active' : ''}`} href="/tools/visualize"> Visualization </a>
@@ -156,17 +160,21 @@
 				</li>
 				-->
 
+				<!--
 				<div class="flex items-center" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem">
 					<div><Docs /></div>
 					<div class="p-1" />
 					<div class="text-xl">Documentation</div>
 				</div>
+				-->
 
 				<!--
 				<li>
 					<a class={`${path === '/docs/project' ? 'active' : ''}`} href="/docs/project">Project</a>
 				</li>
 				-->
+
+				<!--
 
 				<li>
 					<a class={`${path === '/docs/algorithms' ? 'active' : ''}`} href="/docs/algorithms">Algorithms <span class="text-error">(todo)</span></a>
@@ -175,6 +183,7 @@
 				<li>
 					<a class={`${path === '/docs/references' ? 'active' : ''}`} href="/docs/references">References <span class="text-error">(todo)</span></a>
 				</li>
+				-->
 			</ul>
 		</div>
 	</div>

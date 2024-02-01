@@ -24,7 +24,7 @@ import PauseIcon from "$lib/svg/PauseIcon.svelte";
 	$: finishTimes = selectedSolution?.vehicles.map(vehicle => {
 		const lastTour = vehicle.tours[vehicle.tours.length - 1];
 		const lastStop = lastTour[lastTour.length - 1];
-		return lastStop.arrivalTime;
+		return lastStop ? lastStop.arrivalTime : 0; 
 	});
 	$: latestFinishTime = finishTimes ? Math.max(...finishTimes) : 0;
 	const dayStart = dayjs().set('hour', 8).set('minute', 0).set('second', 0);
