@@ -28,8 +28,6 @@
                         <th />
                         <th>Name</th>
                         <th>Description</th>
-                        
-                        <th />
                     </tr>
                 </thead>
                 <tbody>
@@ -39,10 +37,6 @@
                             <th><Map /></th>
                             <td>{solution.name}</td>
                             <td>{solution.description}</td>
-                            
-                            <th>
-                                <button class="btn btn-ghost btn-xs">Delete</button>
-                            </th>
                         </tr>
                     {/each}
                 </tbody>

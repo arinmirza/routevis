@@ -7,7 +7,7 @@
 	import type { DurationMatrix, LocationGroup, Solution } from '$lib/types/map';
 	import axios from 'axios';
 	import InspectApiModal from '$lib/components/debug/InspectAPIModal.svelte';
-	import { fade } from "svelte/transition";
+	import { fade } from 'svelte/transition';
 
 	export let data: PageData;
 
@@ -39,6 +39,11 @@
 	function nonNegativeInt(str: string) {
 		const value = parseInt(str);
 		return value && value >= 0 ? value : 0;
+	}
+
+	function int(str: string) {
+		const value = parseInt(str);
+		return value ? value : 0;
 	}
 
 	function prettyTimestamp(ts: string) {
@@ -78,26 +83,33 @@
 	let sa_iterationCount = '';
 
 	/* Ant Colony Optimization Parameters */
-	let aco_nHyperparams = "";
-	let aco_considerDepot = '';
-	let aco_pheromoneUseFirstHour = '';
-	let aco_ignoreLongTrip = '';
-	let aco_objectiveFunctionType = '';
+	let aco_nHyperparams = '20';
+	let aco_considerDepots = 'false';
+	let aco_solver = 'ACO_VRP_2';
+	let aco_pheromoneUseFirstHour = false;
+	let aco_rangeNIterations = '25, 50';
+	let aco_rangeNSubIterations = '5, 10';
+	let aco_rangeQ = '1, 1000';
+	let aco_rangeAlpha = '2, 5';
+	let aco_rangeBeta = '2, 5';
+	let aco_rangeRho = '0.8, 1';
 
 	/* Genetic Algorithm Parametes */
 	let ga_multiThreaded: boolean = false;
 	let ga_randomPermutationCount: string = '100';
 	let ga_iterationCount: string = '10';
+	let ga_kLowerLimit = true;
+	let ga_maxK = '-1';
 
 	$: requestEndpoint = getEndpoint(selectedAlgorithm);
 
 	function getEndpoint(selected: string | null) {
 		console.log('getendpoint', selected);
 		switch (selected) {
-			case "ga":
-				return "https://vrpms-rpke.vercel.app/api/vrp/ga"
-			case "aco":
-				return "https://vrpms-git-metehan-aco-mefarnis-projects.vercel.app/api/vrp/aco"
+			case 'ga':
+				return 'https://vrpms-rpke.vercel.app/api/vrp/ga';
+			case 'aco':
+				return 'https://vrpms-git-metehan-aco-mefarnis-projects.vercel.app/api/vrp/aco';
 		}
 		return '<ENDPOINT>';
 	}
@@ -121,14 +133,14 @@
 					ignoredCustomers,
 					completedCustomers,
 					auth: session?.access_token,
-					max_k: -1,
-					k_lower_limit: true,
 
 					/* Algorithm specific parameters */
 					...(selectedAlgorithm === 'ga' && {
 						multiThreaded: ga_multiThreaded,
 						iterationCount: nonNegativeInt(ga_iterationCount),
-						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
+						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount),
+						max_k: int(ga_maxK),
+						k_lower_limit: ga_kLowerLimit,
 					}),
 					...(selectedAlgorithm === 'sa' && {
 						cooldownFactor: nonNegativeInt(sa_cooldownFactor),
@@ -136,12 +148,20 @@
 						iterationCount: nonNegativeInt(sa_iterationCount),
 						initialTemperature: nonNegativeInt(sa_initialTemperature)
 					}),
-					...(selectedAlgorithm === 'aco' && {
-						n_hyperparams: nonNegativeInt(aco_nHyperparams),
-						considerDepot: aco_considerDepot,
-						ignoreLongTrip: aco_ignoreLongTrip,
-						pheromoneUseFirstHour: aco_pheromoneUseFirstHour
-					})
+					...(selectedAlgorithm === 'aco' &&
+						{
+							n_hyperparams: nonNegativeInt(aco_nHyperparams),
+							consider_depots: aco_considerDepots,
+							aco_sols: aco_solver,
+							pheromone_uses_first_hour: aco_pheromoneUseFirstHour,
+							range_n_iterations: aco_rangeNIterations ? aco_rangeNIterations.split(',').map((id) => parseFloat(id)) : [],
+							range_n_sub_iterations: aco_rangeNSubIterations ? aco_rangeNSubIterations.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_q: aco_rangeQ ? aco_rangeQ.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_alpha: aco_rangeAlpha ? aco_rangeAlpha.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_beta: aco_rangeBeta ? aco_rangeBeta.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_rho: aco_rangeRho ? aco_rangeRho.split(',').map((id) => parseFloat(id)) : [],
+
+						})
 				},
 				{
 					headers: {
@@ -491,6 +511,37 @@
 							</label>
 						</div>
 					</div>
+
+					<!-- [GA] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="ga_maxK">
+								<span class="label-text">Max K</span>
+							</label>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="ga_maxK"
+								bind:value={ga_maxK} />
+							<label class="label" for="ga_maxK">
+								<span class="label-text text-gray-500"> Provide a (possibly negative) integer. </span>
+							</label>
+						</div>
+					</div>
+
+						<!-- [GA] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="locations-dropdown">
+									<span class="label-text">K Lower Limit</span>
+								</label>
+								<select class="select select-bordered" id="locations-dropdown" bind:value={ga_kLowerLimit}>
+									<option value={false}>False</option>
+									<option value={true} selected>True</option>
+								</select>
+							</div>
+						</div>
 				{/if}
 
 				{#if selectedAlgorithm === 'sa' && showMetaParameters}
@@ -570,11 +621,57 @@
 				{#if selectedAlgorithm === 'aco' && showMetaParameters}
 					<!-- [ACO] -->
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
 						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="locations-dropdown">
-								<span class="label-text">Multi-threaded</span>
+							<label class="label" for="aco_nHyperparams">
+								<span class="label-text">Number of Hyperparameters</span>
 							</label>
-							<select class="select select-bordered" id="locations-dropdown" bind:value={ga_multiThreaded}>
+							<input
+								type="text"
+								class="input input-bordered w-full"
+								id="aco_rangeNIterations"
+								bind:value={aco_nHyperparams} />
+							<label class="label" for="aco_nHyperparams">
+								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_considerDepots">
+								<span class="label-text">Consider Depots</span>
+							</label>
+							<select class="select select-bordered" id="aco_considerDepots" bind:value={aco_considerDepots}>
+								<option value={false} selected>False</option>
+								<option value={true}>True</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_solver">
+								<span class="label-text">Algorithm Variant </span>
+							</label>
+							<select class="select select-bordered" id="aco_solver" bind:value={aco_solver}>
+								<option value={'ACO_VRP_1'}>ACO_VRP_1</option>
+								<option value={'ACO_VRP_2'} selected>ACO_VRP_2</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_pheromoneUseFirstHour">
+								<span class="label-text">Pheromone Use First Hour</span>
+							</label>
+							<select
+								class="select select-bordered"
+								id="aco_pheromoneUseFirstHour"
+								bind:value={aco_pheromoneUseFirstHour}>
 								<option value={false} selected>False</option>
 								<option value={true} disabled>True</option>
 							</select>
@@ -585,16 +682,16 @@
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 						<!-- Input -->
 						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="ga-iter-count">
-								<span class="label-text">Number of Hyperparameters</span>
+							<label class="label" for="aco_rangeNIterationst">
+								<span class="label-text">Range N Iterations</span>
 							</label>
 							<input
 								type="text"
 								class="input input-bordered w-full"
-								id="ga-iter-count"
-								bind:value={aco_nHyperparams} />
-							<label class="label" for="ga-iter-count">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								id="aco_rangeNIterations"
+								bind:value={aco_rangeNIterations} />
+							<label class="label" for="aco_rangeNIterations">
+								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
 							</label>
 						</div>
 					</div>
@@ -603,16 +700,72 @@
 					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
 						<!-- Input -->
 						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="ga-random-count">
-								<span class="label-text">Random Permutation Count</span>
+							<label class="label" for="aco_rangeNSubIterations">
+								<span class="label-text">Range N Subiterations</span>
 							</label>
 							<input
 								type="text"
 								class="input input-bordered w-full"
-								id="ga-random-count"
-								bind:value={ga_randomPermutationCount} />
-							<label class="label" for="ga-random-count">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								id="aco_rangeNSubIterations"
+								bind:value={aco_rangeNSubIterations} />
+							<label class="label" for="aco_rangeNSubIterations">
+								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_rangeQ">
+								<span class="label-text">Range Q</span>
+							</label>
+							<input type="text" class="input input-bordered w-full" id="aco_rangeQ" bind:value={aco_rangeQ} />
+							<label class="label" for="aco_rangeQ">
+								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_rangeAlpha">
+								<span class="label-text">Range Alpha</span>
+							</label>
+							<input type="text" class="input input-bordered w-full" id="aco_rangeAlpha" bind:value={aco_rangeAlpha} />
+							<label class="label" for="aco_rangeAlpha">
+								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_rangeBeta">
+								<span class="label-text">Range Beta</span>
+							</label>
+							<input type="text" class="input input-bordered w-full" id="aco_rangeBeta" bind:value={aco_rangeBeta} />
+							<label class="label" for="aco_rangeBeta">
+								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+							</label>
+						</div>
+					</div>
+
+					<!-- [ACO] -->
+					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+						<!-- Input -->
+						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+							<label class="label" for="aco_rangeRho">
+								<span class="label-text">Range Rho</span>
+							</label>
+							<input type="text" class="input input-bordered w-full" id="aco_rangeRho" bind:value={aco_rangeRho} />
+							<label class="label" for="aco_rangeRho">
+								<span class="label-text text-gray-500"> Provide two comma separated floats. </span>
 							</label>
 						</div>
 					</div>
@@ -719,16 +872,16 @@
 						{/if}
 					</div>
 				{:else}
-				<div transition:fade class="flex place-content-center">
-					<div class="max-w-md">
-						<progress class="progress min-w-md" />
-						<div class="text-center pt-4">
-							<div>Solving, this may take a minute or two...</div>
-							<div>The result will be saved in the database.</div>
-							<div>You can leave this page, or wait for the response.</div>
+					<div transition:fade class="flex place-content-center">
+						<div class="max-w-md">
+							<progress class="progress min-w-md" />
+							<div class="text-center pt-4">
+								<div>Solving, this may take a minute or two...</div>
+								<div>The result will be saved in the database.</div>
+								<div>You can leave this page, or wait for the response.</div>
+							</div>
 						</div>
 					</div>
-				</div>
 				{/if}
 			</div>
 		</div>
@@ -738,37 +891,46 @@
 <InspectApiModal
 	requestBody={JSON.stringify(
 		{
-			/* Common parameters */
-			solutionName,
-			solutionDescription,
-			locationsKey,
-			durationsKey,
-			capacities: vehicleCapacities,
-			startTimes: startTimesOfVehicles,
-			ignoredCustomers,
-			completedCustomers,
-			auth: session?.access_token,
-			max_k: -1,
-			k_lower_limit: true,
+					/* Common parameters */
+					solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+					capacities: vehicleCapacities,
+					startTimes: startTimesOfVehicles,
+					ignoredCustomers,
+					completedCustomers,
+					auth: session?.access_token,
 
-			/* Algorithm specific parameters */
-			...(selectedAlgorithm === 'ga' && {
-				multiThreaded: ga_multiThreaded,
-				iterationCount: nonNegativeInt(ga_iterationCount),
-				randomPermutationCount: nonNegativeInt(ga_randomPermutationCount)
-			}),
-			...(selectedAlgorithm === 'sa' && {
-				cooldownFactor: nonNegativeInt(sa_cooldownFactor),
-				slowdownFactor: nonNegativeInt(sa_slowdownFactor),
-				iterationCount: nonNegativeInt(sa_iterationCount),
-				initialTemperature: nonNegativeInt(sa_initialTemperature)
-			}),
-			...(selectedAlgorithm === 'aco' && {
-				considerDepot: aco_considerDepot,
-				ignoreLongTrip: aco_ignoreLongTrip,
-				pheromoneUseFirstHour: aco_pheromoneUseFirstHour
-			})
-		},
+					/* Algorithm specific parameters */
+					...(selectedAlgorithm === 'ga' && {
+						multiThreaded: ga_multiThreaded,
+						iterationCount: nonNegativeInt(ga_iterationCount),
+						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount),
+						max_k: int(ga_maxK),
+						k_lower_limit: ga_kLowerLimit,
+					}),
+					...(selectedAlgorithm === 'sa' && {
+						cooldownFactor: nonNegativeInt(sa_cooldownFactor),
+						slowdownFactor: nonNegativeInt(sa_slowdownFactor),
+						iterationCount: nonNegativeInt(sa_iterationCount),
+						initialTemperature: nonNegativeInt(sa_initialTemperature)
+					}),
+					...(selectedAlgorithm === 'aco' &&
+						{
+							n_hyperparams: nonNegativeInt(aco_nHyperparams),
+							consider_depots: aco_considerDepots,
+							aco_sols: aco_solver,
+							pheromone_uses_first_hour: aco_pheromoneUseFirstHour,
+							range_n_iterations: aco_rangeNIterations ? aco_rangeNIterations.split(',').map((id) => parseFloat(id)) : [],
+							range_n_sub_iterations: aco_rangeNSubIterations ? aco_rangeNSubIterations.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_q: aco_rangeQ ? aco_rangeQ.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_alpha: aco_rangeAlpha ? aco_rangeAlpha.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_beta: aco_rangeBeta ? aco_rangeBeta.split(',').map((id) => nonNegativeInt(id)) : [],
+							range_rho: aco_rangeRho ? aco_rangeRho.split(',').map((id) => parseFloat(id)) : [],
+
+						})
+				},
 		null,
 		4
 	)}
