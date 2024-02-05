@@ -89,6 +89,7 @@
 	let sa_cooldownFactor = '0.7';
 	let sa_slowdownFactor = '100';
 	let sa_iterationCount = '1000';
+	let sa_max_cycles = '5';
 
 	/* Ant Colony Optimization Parameters */
 	let aco_nHyperparams = '3';
@@ -123,6 +124,10 @@
 		return '<ENDPOINT>';
 	}
 
+	let waitingAco = false;
+	let waitingGa = false;
+	let waitingSa = false;
+
 	async function solve() {
 		console.log('Sending request to endpoint:', requestEndpoint);
 
@@ -133,7 +138,9 @@
 		sa_responses[total_responses] = '?';
 
 		try {
-			aco_responses[total_responses] = await axios.post(
+			(async () => {
+				waitingAco = true;
+				aco_responses[total_responses] = await axios.post(
 				'https://vrpms-main.vercel.app/api/vrp/aco',
 				{
 					/* Common parameters */
@@ -168,10 +175,15 @@
 					}
 				}
 			);
+			waitingAco = false;
+			})();
+			
 		} catch {}
 
 		try {
-			ga_responses[total_responses] = await axios.post(
+			(async () => {
+				waitingGa = true;
+				ga_responses[total_responses] = await axios.post(
 				'https://vrpms-main.vercel.app/api/vrp/ga',
 				{
 					/* Common parameters */
@@ -198,10 +210,15 @@
 					}
 				}
 			);
+			waitingGa = false;
+			})();
+			
 		} catch {}
 
 		try {
-			sa_responses[total_responses] = await axios.post(
+			(async () => {
+				waitingSa = true;
+				sa_responses[total_responses] = await axios.post(
 				'https://vrpms-main.vercel.app/api/vrp/sa',
 				{
 					/* Common parameters */
@@ -220,7 +237,7 @@
 					slowdownMultiplier: nonNegativeInt(sa_slowdownFactor),
 					totalIterations: nonNegativeInt(sa_iterationCount),
 					initialTemperature: nonNegativeInt(sa_initialTemperature),
-					maxCycles: 5
+					maxCycles: nonNegativeInt(sa_max_cycles),
 				},
 				{
 					headers: {
@@ -228,6 +245,9 @@
 					}
 				}
 			);
+			waitingSa = false;
+			})();
+			
 		} catch {}
 
 		total_responses = total_responses + 1;
@@ -722,7 +742,7 @@
 								</label>
 								<input type="text" class="input input-bordered w-full" id="ga_maxK" bind:value={ga_maxK} />
 								<label class="label" for="ga_maxK">
-									<span class="label-text text-gray-500"> Provide a (possibly negative) integer. </span>
+									<span class="label-text text-gray-500"> Provide a positive integer or -1. </span>
 								</label>
 							</div>
 						</div>
@@ -817,6 +837,24 @@
 								</label>
 							</div>
 						</div>
+
+						<!-- [SA] max cycles  -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="sa_max_cycles">
+									<span class="label-text">Max Cycles</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="sa_max_cycles"
+									bind:value={sa_max_cycles} />
+								<label class="label" for="sa_max_cycles">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -875,6 +913,20 @@
 								</span>
 							</label>
 						</div>
+					</div>
+
+					<div class="flex flex-row place-content-end justify-items-end">
+						<div>
+							<button
+								class="btn btn-secondary"
+								on:click={() => {
+									showApiCall = true;
+								}}>
+								Inspect API Call
+							</button>
+						</div>
+						<div class="p-1" />
+						<button class={`btn btn-primary`} on:click={solve}> Solve </button>
 					</div>
 				{:else if receivedResponse}
 					<div class="overflow-x-auto">
@@ -937,9 +989,23 @@
 							</tbody>
 						</table>
 					</div>
+
+					<div class="flex flex-row place-content-end justify-items-end">
+						<div>
+							<button
+								class="btn btn-secondary"
+								on:click={() => {
+									showApiCall = true;
+								}}>
+								Inspect API Call
+							</button>
+						</div>
+						<div class="p-1" />
+						<button class={`btn btn-primary`} on:click={solve}> Solve </button>
+					</div>
 				{/if}
 
-				{#if waitingResponse}
+				{#if waitingAco || waitingGa || waitingSa}
 					<div transition:fade class="flex place-content-center">
 						<div class="max-w-md">
 							<progress class="progress min-w-md" />
@@ -951,19 +1017,7 @@
 					</div>
 				{/if}
 
-				<div class="flex flex-row place-content-end justify-items-end">
-					<div>
-						<button
-							class="btn btn-secondary"
-							on:click={() => {
-								showApiCall = true;
-							}}>
-							Inspect API Call
-						</button>
-					</div>
-					<div class="p-1" />
-					<button class={`btn btn-primary`} on:click={solve}> Solve </button>
-				</div>
+				
 			</div>
 		</div>
 
