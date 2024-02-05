@@ -80,8 +80,8 @@
 
 	/* Genetic Algorithm Parametes */
 	let ga_multiThreaded: boolean = false;
-	let ga_randomPermutationCount: string = '100';
-	let ga_iterationCount: string = '10';
+	let ga_randomPermutationCount: string = '1000';
+	let ga_iterationCount: string = '48';
 	let ga_kLowerLimit = true;
 	let ga_maxK = '-1';
 
@@ -448,7 +448,7 @@
 							</label>
 							<select class="select select-bordered" id="locations-dropdown" bind:value={ga_multiThreaded}>
 								<option value={false} selected>False</option>
-								<option value={true} disabled>True</option>
+								<option value={true} >True</option>
 							</select>
 						</div>
 					</div>
@@ -887,7 +887,7 @@
 </div>
 
 <InspectApiModal
-	requestBody={JSON.stringify(
+	body1={
 		{
 					/* Common parameters */
 					solutionName,
@@ -929,9 +929,7 @@
 						termination: sa_termination,
 						neighborhood: sa_neighborhood,
 					})
-				},
-		null,
-		4
-	)}
-	endpoint={requestEndpoint}
+				}
+				}
+	request1={getEndpoint(selectedAlgorithm)}
 	bind:open={showApiCall} />

@@ -55,6 +55,7 @@
                     <div class="pt-6" transition:fade>
                         <AlertInfo>
                             A recovery email was sent to the address you provided if it exists in our system.
+							Please contact us directly in case of further problems.
                         </AlertInfo>
                         
                     </div>

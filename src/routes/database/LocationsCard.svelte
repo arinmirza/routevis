@@ -50,6 +50,8 @@
 			</div>
 		{/if}
 
+		<!--
+
 		{#if selection}
 			<div in:fade class="flex flex-row place-content-end justify-items-end" />
 		{/if}
@@ -67,5 +69,6 @@
                 {/if}
 			</div>
 		</div>
+		-->
 	</div>
 </div>

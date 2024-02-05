@@ -23,3 +23,5 @@ export const load: LayoutLoad = async ({ fetch, data, depends }) => {
 
 	return { session, query };
 };
+
+//export const ssr = false;

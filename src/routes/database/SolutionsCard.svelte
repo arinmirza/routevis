@@ -1,9 +1,8 @@
 <script lang="ts">
-	import type { SolutionEntry } from "$lib/database/queries/solutions";
 	import Map from "$lib/svg/Map.svelte";
 	import { fade } from "svelte/transition";
 
-    export let solutions: SolutionEntry[] | null = null;
+    export let solutions: any[] | null = null;
 
     let selection = false;
 
@@ -44,6 +43,7 @@
         </div>
         {/if}
 
+        <!--
         <div in:fade class="flex flex-row place-content-end justify-items-end">
             <div>
                 {#if selection}
@@ -56,6 +56,7 @@
                 
             </div>
         </div>
+        -->
 
 
     </div>

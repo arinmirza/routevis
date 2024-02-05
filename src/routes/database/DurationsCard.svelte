@@ -1,10 +1,8 @@
 <script lang="ts">
-	import type { DurationMatrix } from "$lib/database/queries/durations";
-	import type { Solution } from "$lib/database/queries/solutions";
 	import Map from "$lib/svg/Map.svelte";
 	import { fade } from "svelte/transition";
 
-    export let durations: DurationMatrix[] | null = null;
+    export let durations: any[] | null = null;
     let selection = false;
 
 </script>
@@ -45,6 +43,7 @@
         </div>
         {/if}
 
+        <!--
         <div in:fade class="flex flex-row place-content-end justify-items-end">
             <div>
                 {#if selection}
@@ -57,6 +56,7 @@
                 
             </div>
         </div>
+        -->
 
 
     </div>

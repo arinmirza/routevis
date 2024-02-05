@@ -23,6 +23,11 @@
 	/* Toggle Parameters */
 	let showAdvancedParameters = false;
 	let showMetaParameters = false;
+
+	let aco_showMetaParameters = false;
+	let ga_showMetaParameters = false;
+	let sa_showMetaParameters = false;
+
 	let showApiCall = false;
 	let loadingLocations = false;
 	let loadingDurations = false;
@@ -33,7 +38,10 @@
 	/* Technical variables */
 	let waitingResponse = false;
 	let receivedResponse = false;
-	let response: any;
+	let aco_responses: any[] = [];
+	let ga_responses: any[] = [];
+	let sa_responses: any[] = [];
+	let total_responses = 0;
 
 	/* Helper methods */
 	function nonNegativeInt(str: string) {
@@ -77,14 +85,14 @@
 	let solutionDescription: string = '';
 
 	/* Simulated Annealing Parameters */
-	let sa_initialTemperature = '';
-	let sa_cooldownFactor = '';
-	let sa_slowdownFactor = '';
-	let sa_iterationCount = '';
+	let sa_initialTemperature = '1000';
+	let sa_cooldownFactor = '0.7';
+	let sa_slowdownFactor = '100';
+	let sa_iterationCount = '1000';
 
 	/* Ant Colony Optimization Parameters */
-	let aco_nHyperparams = '20';
-	let aco_considerDepots = 'false';
+	let aco_nHyperparams = '3';
+	let aco_considerDepots = false;
 	let aco_solver = 'ACO_VRP_2';
 	let aco_pheromoneUseFirstHour = false;
 	let aco_rangeNIterations = '25, 50';
@@ -96,10 +104,11 @@
 
 	/* Genetic Algorithm Parametes */
 	let ga_multiThreaded: boolean = false;
-	let ga_randomPermutationCount: string = '100';
-	let ga_iterationCount: string = '10';
+	let ga_randomPermutationCount: string = '1000';
+	let ga_iterationCount: string = '48';
 	let ga_kLowerLimit = true;
 	let ga_maxK = '-1';
+
 
 	$: requestEndpoint = getEndpoint(selectedAlgorithm);
 
@@ -119,12 +128,54 @@
 
 		waitingResponse = true;
 
+		aco_responses[total_responses] = '?';
+		ga_responses[total_responses] = '?';
+		sa_responses[total_responses] = '?';
+
 		try {
-			response = await axios.post(
-				requestEndpoint,
+			aco_responses[total_responses] = await axios.post(
+				'https://vrpms-main.vercel.app/api/vrp/aco',
 				{
 					/* Common parameters */
-					solutionName,
+					solutionName: '[ACO] ' + solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+
+					capacities: vehicleCapacities,
+					startTimes: startTimesOfVehicles,
+					ignoredCustomers,
+					completedCustomers,
+					auth: session?.access_token,
+
+					/* Aco parameters */
+					n_hyperparams: nonNegativeInt(aco_nHyperparams),
+					consider_depots: aco_considerDepots,
+					aco_sols: aco_solver,
+					pheromone_uses_first_hour: aco_pheromoneUseFirstHour,
+					range_n_iterations: aco_rangeNIterations ? aco_rangeNIterations.split(',').map((id) => parseFloat(id)) : [],
+					range_n_sub_iterations: aco_rangeNSubIterations
+						? aco_rangeNSubIterations.split(',').map((id) => nonNegativeInt(id))
+						: [],
+					range_q: aco_rangeQ ? aco_rangeQ.split(',').map((id) => nonNegativeInt(id)) : [],
+					range_alpha: aco_rangeAlpha ? aco_rangeAlpha.split(',').map((id) => nonNegativeInt(id)) : [],
+					range_beta: aco_rangeBeta ? aco_rangeBeta.split(',').map((id) => nonNegativeInt(id)) : [],
+					range_rho: aco_rangeRho ? aco_rangeRho.split(',').map((id) => parseFloat(id)) : []
+				},
+				{
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				}
+			);
+		} catch {}
+
+		try {
+			ga_responses[total_responses] = await axios.post(
+				'https://vrpms-main.vercel.app/api/vrp/ga',
+				{
+					/* Common parameters */
+					solutionName: '[GA] ' + solutionName,
 					solutionDescription,
 					locationsKey,
 					durationsKey,
@@ -134,34 +185,12 @@
 					completedCustomers,
 					auth: session?.access_token,
 
-					/* Algorithm specific parameters */
-					...(selectedAlgorithm === 'ga' && {
-						multiThreaded: ga_multiThreaded,
-						iterationCount: nonNegativeInt(ga_iterationCount),
-						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount),
-						max_k: int(ga_maxK),
-						k_lower_limit: ga_kLowerLimit,
-					}),
-					...(selectedAlgorithm === 'sa' && {
-						cooldownFactor: nonNegativeInt(sa_cooldownFactor),
-						slowdownFactor: nonNegativeInt(sa_slowdownFactor),
-						iterationCount: nonNegativeInt(sa_iterationCount),
-						initialTemperature: nonNegativeInt(sa_initialTemperature)
-					}),
-					...(selectedAlgorithm === 'aco' &&
-						{
-							n_hyperparams: nonNegativeInt(aco_nHyperparams),
-							consider_depots: aco_considerDepots,
-							aco_sols: aco_solver,
-							pheromone_uses_first_hour: aco_pheromoneUseFirstHour,
-							range_n_iterations: aco_rangeNIterations ? aco_rangeNIterations.split(',').map((id) => parseFloat(id)) : [],
-							range_n_sub_iterations: aco_rangeNSubIterations ? aco_rangeNSubIterations.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_q: aco_rangeQ ? aco_rangeQ.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_alpha: aco_rangeAlpha ? aco_rangeAlpha.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_beta: aco_rangeBeta ? aco_rangeBeta.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_rho: aco_rangeRho ? aco_rangeRho.split(',').map((id) => parseFloat(id)) : [],
-
-						})
+					/* GA parameters */
+					multiThreaded: ga_multiThreaded,
+					iterationCount: nonNegativeInt(ga_iterationCount),
+					randomPermutationCount: nonNegativeInt(ga_randomPermutationCount),
+					max_k: int(ga_maxK),
+					k_lower_limit: ga_kLowerLimit
 				},
 				{
 					headers: {
@@ -169,10 +198,39 @@
 					}
 				}
 			);
-		} catch {
-			response = { error: 'Invalid request.' };
-		}
+		} catch {}
 
+		try {
+			sa_responses[total_responses] = await axios.post(
+				'https://vrpms-main.vercel.app/api/vrp/sa',
+				{
+					/* Common parameters */
+					solutionName: '[SA] ' + solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+					capacities: vehicleCapacities,
+					startTimes: startTimesOfVehicles,
+					ignoredCustomers,
+					completedCustomers,
+					auth: session?.access_token,
+
+					/* SA parameters */
+					cooldownFactor: nonNegativeInt(sa_cooldownFactor),
+					slowdownMultiplier: nonNegativeInt(sa_slowdownFactor),
+					totalIterations: nonNegativeInt(sa_iterationCount),
+					initialTemperature: nonNegativeInt(sa_initialTemperature),
+					maxCycles: 5
+				},
+				{
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				}
+			);
+		} catch {}
+
+		total_responses = total_responses + 1;
 		waitingResponse = false;
 		receivedResponse = true;
 	}
@@ -213,7 +271,7 @@
 			<div class="card-body">
 				<!-- Scenario Card Title -->
 				<div class="flex flex-row items-center">
-					<div id="title" class="text-3xl font-bold pb-4">Scenario</div>
+					<div id="title" class="text-3xl font-bold pb-4">Problem</div>
 					{#if loadingLocations || loadingDurations}
 						<div class="loading loading-spinner loading-lg" style="margin-left: auto" />
 					{/if}
@@ -437,98 +495,237 @@
 		<div class="card bg-base-200 w-full text-neutral-content">
 			<div class="card-body">
 				<!-- Algorithm Card Title -->
-				<div id="title" class="text-3xl font-bold pb-4">Solver</div>
-
-				<!-- Algorithm Selection  -->
-
-				<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-					<div class="form-control" style="min-width: 28rem;">
-						<label class="label" for="locations-dropdown">
-							<span class="label-text">Algorithm</span>
-						</label>
-						<select class="select select-bordered" id="locations-dropdown" bind:value={selectedAlgorithm}>
-							<option value={null} disabled selected>Select a VRP solver</option>
-							<option value="aco">Ant Colony Optimization</option>
-							<option value="ga">Genetic Algorithm</option>
-							<option value="sa">Simulated Annealing</option>
-						</select>
-					</div>
-
-					<div class="divider lg:divider-horizontal" />
-					<div class="max-w-md">
-						<p>Algorithm to solve the time-dependent multi-vehicle routing problem.</p>
-					</div>
-				</div>
+				<div id="title" class="text-3xl font-bold pb-4">Solvers</div>
 
 				<!-- Algorithm Options -->
 
-				{#if selectedAlgorithm === 'ga' && showMetaParameters}
-					<!-- [GA] Multi-threaded Selection -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="locations-dropdown">
-								<span class="label-text">Multi-threaded</span>
-							</label>
-							<select class="select select-bordered" id="locations-dropdown" bind:value={ga_multiThreaded}>
-								<option value={false} selected>False</option>
-								<option value={true} disabled>True</option>
-							</select>
+				<div class="collapse bg-base-200">
+					<input type="checkbox" />
+					<div class="collapse-title text-xl font-medium">Ant Colony Optimization</div>
+					<div class="collapse-content">
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_nHyperparams">
+									<span class="label-text">Number of Hyperparameters</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="aco_rangeNIterations"
+									bind:value={aco_nHyperparams} />
+								<label class="label" for="aco_nHyperparams">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
 						</div>
-					</div>
 
-					<!-- [GA] Iteration Count -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="ga-iter-count">
-								<span class="label-text">Iteration Count</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="ga-iter-count"
-								bind:value={ga_iterationCount} />
-							<label class="label" for="ga-iter-count">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_considerDepots">
+									<span class="label-text">Consider Depots</span>
+								</label>
+								<select class="select select-bordered" id="aco_considerDepots" bind:value={aco_considerDepots}>
+									<option value={false} selected>False</option>
+									<option value={true}>True</option>
+								</select>
+							</div>
 						</div>
-					</div>
 
-					<!-- [GA] Random Permutation Count -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="ga-random-count">
-								<span class="label-text">Random Permutation Count</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="ga-random-count"
-								bind:value={ga_randomPermutationCount} />
-							<label class="label" for="ga-random-count">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_solver">
+									<span class="label-text">Algorithm Variant </span>
+								</label>
+								<select class="select select-bordered" id="aco_solver" bind:value={aco_solver}>
+									<option value={'ACO_VRP_1'}>ACO_VRP_1</option>
+									<option value={'ACO_VRP_2'} selected>ACO_VRP_2</option>
+								</select>
+							</div>
 						</div>
-					</div>
 
-					<!-- [GA] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="ga_maxK">
-								<span class="label-text">Max K</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="ga_maxK"
-								bind:value={ga_maxK} />
-							<label class="label" for="ga_maxK">
-								<span class="label-text text-gray-500"> Provide a (possibly negative) integer. </span>
-							</label>
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_pheromoneUseFirstHour">
+									<span class="label-text">Pheromone Use First Hour</span>
+								</label>
+								<select
+									class="select select-bordered"
+									id="aco_pheromoneUseFirstHour"
+									bind:value={aco_pheromoneUseFirstHour}>
+									<option value={false} selected>False</option>
+									<option value={true} disabled>True</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_rangeNIterationst">
+									<span class="label-text">Range N Iterations</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="aco_rangeNIterations"
+									bind:value={aco_rangeNIterations} />
+								<label class="label" for="aco_rangeNIterations">
+									<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_rangeNSubIterations">
+									<span class="label-text">Range N Subiterations</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="aco_rangeNSubIterations"
+									bind:value={aco_rangeNSubIterations} />
+								<label class="label" for="aco_rangeNSubIterations">
+									<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_rangeQ">
+									<span class="label-text">Range Q</span>
+								</label>
+								<input type="text" class="input input-bordered w-full" id="aco_rangeQ" bind:value={aco_rangeQ} />
+								<label class="label" for="aco_rangeQ">
+									<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_rangeAlpha">
+									<span class="label-text">Range Alpha</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="aco_rangeAlpha"
+									bind:value={aco_rangeAlpha} />
+								<label class="label" for="aco_rangeAlpha">
+									<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_rangeBeta">
+									<span class="label-text">Range Beta</span>
+								</label>
+								<input type="text" class="input input-bordered w-full" id="aco_rangeBeta" bind:value={aco_rangeBeta} />
+								<label class="label" for="aco_rangeBeta">
+									<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [ACO] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="aco_rangeRho">
+									<span class="label-text">Range Rho</span>
+								</label>
+								<input type="text" class="input input-bordered w-full" id="aco_rangeRho" bind:value={aco_rangeRho} />
+								<label class="label" for="aco_rangeRho">
+									<span class="label-text text-gray-500"> Provide two comma separated floats. </span>
+								</label>
+							</div>
 						</div>
 					</div>
+				</div>
+
+				<div class="collapse bg-base-200">
+					<input type="checkbox" />
+					<div class="collapse-title text-xl font-medium">Genetic Algorithm</div>
+					<div class="collapse-content">
+						<!-- [GA] Multi-threaded Selection -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="locations-dropdown">
+									<span class="label-text">Multi-threaded</span>
+								</label>
+								<select class="select select-bordered" id="locations-dropdown" bind:value={ga_multiThreaded}>
+									<option value={false} selected>False</option>
+									<option value={true}>True</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- [GA] Iteration Count -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="ga-iter-count">
+									<span class="label-text">Iteration Count</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="ga-iter-count"
+									bind:value={ga_iterationCount} />
+								<label class="label" for="ga-iter-count">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [GA] Random Permutation Count -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="ga-random-count">
+									<span class="label-text">Random Permutation Count</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="ga-random-count"
+									bind:value={ga_randomPermutationCount} />
+								<label class="label" for="ga-random-count">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
+						</div>
+
+						<!-- [GA] -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="ga_maxK">
+									<span class="label-text">Max K</span>
+								</label>
+								<input type="text" class="input input-bordered w-full" id="ga_maxK" bind:value={ga_maxK} />
+								<label class="label" for="ga_maxK">
+									<span class="label-text text-gray-500"> Provide a (possibly negative) integer. </span>
+								</label>
+							</div>
+						</div>
 
 						<!-- [GA] -->
 						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
@@ -542,244 +739,84 @@
 								</select>
 							</div>
 						</div>
-				{/if}
-
-				{#if selectedAlgorithm === 'sa' && showMetaParameters}
-					<!-- [SA] Iteration Count -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="sa-iter-count">
-								<span class="label-text">Iteration Count</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="sa-iter-count"
-								bind:value={sa_iterationCount} />
-							<label class="label" for="sa-iter-count">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
-						</div>
 					</div>
+				</div>
 
-					<!-- [SA] Initial Temperature -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="sa-initial-temperature">
-								<span class="label-text">Initial Temperature</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="sa-initial-temperature"
-								bind:value={sa_initialTemperature} />
-							<label class="label" for="sa-initial-temperature">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
+				<div class="collapse bg-base-200">
+					<input type="checkbox" />
+					<div class="collapse-title text-xl font-medium">Simulated Annealing</div>
+					<div class="collapse-content">
+						<!-- [SA] Iteration Count -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="sa-iter-count">
+									<span class="label-text">Iteration Count</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="sa-iter-count"
+									bind:value={sa_iterationCount} />
+								<label class="label" for="sa-iter-count">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
 						</div>
-					</div>
 
-					<!-- [SA] Cooldown Factor -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="sa-slowdown-factor">
-								<span class="label-text">Slowdown Factor</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="sa-slowdown-factor"
-								bind:value={sa_slowdownFactor} />
-							<label class="label" for="sa-slowdown-factor">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
+						<!-- [SA] Initial Temperature -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="sa-initial-temperature">
+									<span class="label-text">Initial Temperature</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="sa-initial-temperature"
+									bind:value={sa_initialTemperature} />
+								<label class="label" for="sa-initial-temperature">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
 						</div>
-					</div>
 
-					<!-- [SA] Slowdown Factor -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="sa-cooldown-factor">
-								<span class="label-text">Cooldown Factor</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="sa-cooldown-factor"
-								bind:value={sa_cooldownFactor} />
-							<label class="label" for="sa-cooldown-factor">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
+						<!-- [SA] Cooldown Factor -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="sa-slowdown-factor">
+									<span class="label-text">Slowdown Factor</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="sa-slowdown-factor"
+									bind:value={sa_slowdownFactor} />
+								<label class="label" for="sa-slowdown-factor">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
 						</div>
-					</div>
-				{/if}
 
-				{#if selectedAlgorithm === 'aco' && showMetaParameters}
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_nHyperparams">
-								<span class="label-text">Number of Hyperparameters</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="aco_rangeNIterations"
-								bind:value={aco_nHyperparams} />
-							<label class="label" for="aco_nHyperparams">
-								<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
-							</label>
+						<!-- [SA] Slowdown Factor -->
+						<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
+							<!-- Input -->
+							<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
+								<label class="label" for="sa-cooldown-factor">
+									<span class="label-text">Cooldown Factor</span>
+								</label>
+								<input
+									type="text"
+									class="input input-bordered w-full"
+									id="sa-cooldown-factor"
+									bind:value={sa_cooldownFactor} />
+								<label class="label" for="sa-cooldown-factor">
+									<span class="label-text text-gray-500"> Provide a non-negative integer. </span>
+								</label>
+							</div>
 						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_considerDepots">
-								<span class="label-text">Consider Depots</span>
-							</label>
-							<select class="select select-bordered" id="aco_considerDepots" bind:value={aco_considerDepots}>
-								<option value={false} selected>False</option>
-								<option value={true}>True</option>
-							</select>
-						</div>
-					</div>
-
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_solver">
-								<span class="label-text">Algorithm Variant </span>
-							</label>
-							<select class="select select-bordered" id="aco_solver" bind:value={aco_solver}>
-								<option value={'ACO_VRP_1'}>ACO_VRP_1</option>
-								<option value={'ACO_VRP_2'} selected>ACO_VRP_2</option>
-							</select>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_pheromoneUseFirstHour">
-								<span class="label-text">Pheromone Use First Hour</span>
-							</label>
-							<select
-								class="select select-bordered"
-								id="aco_pheromoneUseFirstHour"
-								bind:value={aco_pheromoneUseFirstHour}>
-								<option value={false} selected>False</option>
-								<option value={true} disabled>True</option>
-							</select>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_rangeNIterationst">
-								<span class="label-text">Range N Iterations</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="aco_rangeNIterations"
-								bind:value={aco_rangeNIterations} />
-							<label class="label" for="aco_rangeNIterations">
-								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
-							</label>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_rangeNSubIterations">
-								<span class="label-text">Range N Subiterations</span>
-							</label>
-							<input
-								type="text"
-								class="input input-bordered w-full"
-								id="aco_rangeNSubIterations"
-								bind:value={aco_rangeNSubIterations} />
-							<label class="label" for="aco_rangeNSubIterations">
-								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
-							</label>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_rangeQ">
-								<span class="label-text">Range Q</span>
-							</label>
-							<input type="text" class="input input-bordered w-full" id="aco_rangeQ" bind:value={aco_rangeQ} />
-							<label class="label" for="aco_rangeQ">
-								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
-							</label>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_rangeAlpha">
-								<span class="label-text">Range Alpha</span>
-							</label>
-							<input type="text" class="input input-bordered w-full" id="aco_rangeAlpha" bind:value={aco_rangeAlpha} />
-							<label class="label" for="aco_rangeAlpha">
-								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
-							</label>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_rangeBeta">
-								<span class="label-text">Range Beta</span>
-							</label>
-							<input type="text" class="input input-bordered w-full" id="aco_rangeBeta" bind:value={aco_rangeBeta} />
-							<label class="label" for="aco_rangeBeta">
-								<span class="label-text text-gray-500"> Provide two comma separated integers. </span>
-							</label>
-						</div>
-					</div>
-
-					<!-- [ACO] -->
-					<div class="flex flex-col w-full lg:flex-row pb-8 items-center">
-						<!-- Input -->
-						<div class="form-control" style="min-width: 28rem; max-width: 28rem;">
-							<label class="label" for="aco_rangeRho">
-								<span class="label-text">Range Rho</span>
-							</label>
-							<input type="text" class="input input-bordered w-full" id="aco_rangeRho" bind:value={aco_rangeRho} />
-							<label class="label" for="aco_rangeRho">
-								<span class="label-text text-gray-500"> Provide two comma separated floats. </span>
-							</label>
-						</div>
-					</div>
-				{/if}
-
-				<div class="flex flex-row place-content-end justify-items-end">
-					<div>
-						<button
-							class="btn btn-ghost"
-							on:click={() => {
-								showMetaParameters = !showMetaParameters;
-							}}>
-							{showMetaParameters ? 'Hide' : 'Show'} Meta Parameters
-						</button>
 					</div>
 				</div>
 			</div>
@@ -790,7 +827,7 @@
 		<!-- Result Card -->
 		<div class="card bg-base-200 w-full text-neutral-content">
 			<div class="card-body">
-				<div id="title" class="text-3xl font-bold pb-4">Result</div>
+				<div id="title" class="text-3xl font-bold pb-4">Results</div>
 
 				{#if !session}
 					<div class="flex flex-col items-center">
@@ -839,60 +876,159 @@
 							</label>
 						</div>
 					</div>
-
-					<div class="flex flex-row place-content-end justify-items-end">
-						<div>
-							<button
-								class="btn btn-secondary"
-								on:click={() => {
-									showApiCall = true;
-								}}>
-								Inspect API Call
-							</button>
-						</div>
-						<div class="p-1" />
-						<button class={`btn btn-primary`} on:click={solve}> Solve </button>
-					</div>
 				{:else if receivedResponse}
-					<div class="max-w-64 text-wrap">
-						{#if response?.data?.success}
-							<p>
-								<b>Success!</b> A solution with <b>{response?.data?.message?.durationMax}</b> seconds of max duration
-								and <b>{response?.data?.message?.durationSum}</b> seconds of total duration was found.
-							</p>
-							<p>
-								The solution is saved under the name "<b>{solutionName}</b>" and can be displayed using the
-								visualization tool.
-							</p>
-						{:else}
-							<p><b>Something went wrong.</b> We are dumping the received response below.</p>
-							<div class="max-w-64 text-wrap" style="max-width: 28rem;">
-								<p>{JSON.stringify(response)}</p>
-							</div>
-						{/if}
+					<div class="overflow-x-auto">
+						<table class="table">
+							<!-- head -->
+							<thead>
+								<tr>
+									<th>Algorithm</th>
+									{#each aco_responses as _, i}
+										<th>Run {i + 1}</th>
+									{/each}
+									<th>Best Result</th>
+								</tr>
+							</thead>
+							<tbody>
+								<!-- row 1 -->
+								<tr>
+									<td>Ant Colony Optimization</td>
+									{#each aco_responses as response}
+										<td>{parseInt(response?.data?.message?.durationMax) ?? '??'}</td>
+									{/each}
+									<td>
+										{Math.min(
+											...aco_responses
+												.filter((x) => x?.data?.success)
+												.map((x) => nonNegativeInt(x?.data?.message?.durationMax))
+										)}
+									</td>
+								</tr>
+								<!-- row 2 -->
+								<tr>
+									<td>Genetic Algorithm</td>
+									{#each ga_responses as response}
+										<td>{parseInt(response?.data?.message?.durationMax) ?? '??'}</td>
+									{/each}
+									<td>
+										{Math.min(
+											Infinity,
+											...ga_responses
+												.filter((x) => x?.data?.success)
+												.map((x) => nonNegativeInt(x?.data?.message?.durationMax))
+										)}
+									</td>
+								</tr>
+								<!-- row 3 -->
+								<tr>
+									<td>Simulated Annealing</td>
+									{#each sa_responses as response}
+										<td>{parseInt(response?.data?.message?.durationMax) ?? '??'}</td>
+									{/each}
+									<td>
+										{Math.min(
+											Infinity,
+											...sa_responses
+												.filter((x) => x?.data?.success)
+												.map((x) => nonNegativeInt(x?.data?.message?.durationMax))
+										)}
+									</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
-				{:else}
+				{/if}
+
+				{#if waitingResponse}
 					<div transition:fade class="flex place-content-center">
 						<div class="max-w-md">
 							<progress class="progress min-w-md" />
 							<div class="text-center pt-4">
 								<div>Solving, this may take a minute or two...</div>
 								<div>The result will be saved in the database.</div>
-								<div>You can leave this page, or wait for the response.</div>
 							</div>
 						</div>
 					</div>
 				{/if}
+
+				<div class="flex flex-row place-content-end justify-items-end">
+					<div>
+						<button
+							class="btn btn-secondary"
+							on:click={() => {
+								showApiCall = true;
+							}}>
+							Inspect API Call
+						</button>
+					</div>
+					<div class="p-1" />
+					<button class={`btn btn-primary`} on:click={solve}> Solve </button>
+				</div>
 			</div>
 		</div>
+
+		<!--
+
+		<div class="p-2" />
+
+		<div class="card bg-base-200 w-full text-neutral-content">
+			<div class="card-body">
+				<div id="title" class="text-3xl font-bold pb-4">Chart</div>
+
+				
+
+
+
+
+			</div>
+		</div>
+	-->
 	</div>
 </div>
 
+<!--
+
+		null,
+		4
+-->
+
 <InspectApiModal
-	requestBody={JSON.stringify(
+	request1="https://vrpms-main.vercel.app/api/vrp/aco"
+	request2="https://vrpms-main.vercel.app/api/vrp/ga"
+	request3="https://vrpms-main.vercel.app/api/vrp/sa"
+	body1={
 		{
 					/* Common parameters */
-					solutionName,
+					solutionName: '[ACO] ' + solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+
+					capacities: vehicleCapacities,
+					startTimes: startTimesOfVehicles,
+					ignoredCustomers,
+					completedCustomers,
+					auth: session?.access_token,
+
+					/* Aco parameters */
+					n_hyperparams: nonNegativeInt(aco_nHyperparams),
+					consider_depots: aco_considerDepots,
+					aco_sols: aco_solver,
+					pheromone_uses_first_hour: aco_pheromoneUseFirstHour,
+					range_n_iterations: aco_rangeNIterations ? aco_rangeNIterations.split(',').map((id) => parseFloat(id)) : [],
+					range_n_sub_iterations: aco_rangeNSubIterations
+						? aco_rangeNSubIterations.split(',').map((id) => nonNegativeInt(id))
+						: [],
+					range_q: aco_rangeQ ? aco_rangeQ.split(',').map((id) => nonNegativeInt(id)) : [],
+					range_alpha: aco_rangeAlpha ? aco_rangeAlpha.split(',').map((id) => nonNegativeInt(id)) : [],
+					range_beta: aco_rangeBeta ? aco_rangeBeta.split(',').map((id) => nonNegativeInt(id)) : [],
+					range_rho: aco_rangeRho ? aco_rangeRho.split(',').map((id) => parseFloat(id)) : []
+				}
+	}
+	body2={
+		{
+					/* Common parameters */
+					solutionName: '[GA] ' + solutionName,
 					solutionDescription,
 					locationsKey,
 					durationsKey,
@@ -902,37 +1038,33 @@
 					completedCustomers,
 					auth: session?.access_token,
 
-					/* Algorithm specific parameters */
-					...(selectedAlgorithm === 'ga' && {
-						multiThreaded: ga_multiThreaded,
-						iterationCount: nonNegativeInt(ga_iterationCount),
-						randomPermutationCount: nonNegativeInt(ga_randomPermutationCount),
-						max_k: int(ga_maxK),
-						k_lower_limit: ga_kLowerLimit,
-					}),
-					...(selectedAlgorithm === 'sa' && {
-						cooldownFactor: nonNegativeInt(sa_cooldownFactor),
-						slowdownFactor: nonNegativeInt(sa_slowdownFactor),
-						iterationCount: nonNegativeInt(sa_iterationCount),
-						initialTemperature: nonNegativeInt(sa_initialTemperature)
-					}),
-					...(selectedAlgorithm === 'aco' &&
-						{
-							n_hyperparams: nonNegativeInt(aco_nHyperparams),
-							consider_depots: aco_considerDepots,
-							aco_sols: aco_solver,
-							pheromone_uses_first_hour: aco_pheromoneUseFirstHour,
-							range_n_iterations: aco_rangeNIterations ? aco_rangeNIterations.split(',').map((id) => parseFloat(id)) : [],
-							range_n_sub_iterations: aco_rangeNSubIterations ? aco_rangeNSubIterations.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_q: aco_rangeQ ? aco_rangeQ.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_alpha: aco_rangeAlpha ? aco_rangeAlpha.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_beta: aco_rangeBeta ? aco_rangeBeta.split(',').map((id) => nonNegativeInt(id)) : [],
-							range_rho: aco_rangeRho ? aco_rangeRho.split(',').map((id) => parseFloat(id)) : [],
+					/* GA parameters */
+					multiThreaded: ga_multiThreaded,
+					iterationCount: nonNegativeInt(ga_iterationCount),
+					randomPermutationCount: nonNegativeInt(ga_randomPermutationCount),
+					max_k: int(ga_maxK),
+					k_lower_limit: ga_kLowerLimit
+				}
+	}
+	body3={
+		{
+					/* Common parameters */
+					solutionName: '[SA] ' + solutionName,
+					solutionDescription,
+					locationsKey,
+					durationsKey,
+					capacities: vehicleCapacities,
+					startTimes: startTimesOfVehicles,
+					ignoredCustomers,
+					completedCustomers,
+					auth: session?.access_token,
 
-						})
-				},
-		null,
-		4
-	)}
-	endpoint={requestEndpoint}
+					/* SA parameters */
+					cooldownFactor: nonNegativeInt(sa_cooldownFactor),
+					slowdownMultiplier: nonNegativeInt(sa_slowdownFactor),
+					totalIterations: nonNegativeInt(sa_iterationCount),
+					initialTemperature: nonNegativeInt(sa_initialTemperature),
+					maxCycles: 5
+				}
+	}
 	bind:open={showApiCall} />
